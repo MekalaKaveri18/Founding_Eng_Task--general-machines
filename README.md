@@ -20,3 +20,10 @@ npm run build
 `public/data/` is pre-baked from an OpenStreetMap extract by `scripts/bake_osm.py` so the app never depends on a live OSM query service. Run `python scripts/bake_osm.py <Bangkok.osm.pbf> public/data` to regenerate. Preset plots come from `scripts/make_presets.py`.
 
 Research and sources for every rule: see `docs/research-notes.md`; build plan in `docs/build-plan.md`.
+
+## Engine notes
+
+- `src/engine/` is pure TypeScript with no DOM, covered by `npm test` (72 tests, hand-checked against the regulations).
+- **clipper2-js is used for booleans and areas only.** Its `InflatePaths` (offset) in v1.2.4 applies half the requested distance and returns malformed polygons, so per-edge setbacks are built as explicit strip polygons (`geom.ts`) and subtracted with clipper. Two `it.fails` tests in `tests/clipper-smoke.test.ts` document the bug and will flag a fixed release.
+- Two envelopes are computed: **low-rise** (under 23 m and under 10,000 m², 3 m side distances) and **high-rise** (6 m from every boundary and the road for the whole building including its podium, MR 33 art. 4).
+- The default Vitest worker pools fail on this Windows + Node 24 setup, so `vitest.config.ts` uses `vmThreads`.

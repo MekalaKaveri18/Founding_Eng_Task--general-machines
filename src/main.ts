@@ -95,18 +95,28 @@ function compute(s: AppState): { vm: ViewModel; input: PlotInput | null } {
 
 // Concept designs take up to ~150 ms on a big plot, so they are computed after the cheap results, debounced while dragging.
 let designTimer = 0;
+let lastVm: ViewModel | null = null;
+// True when something that can change a design changed. Tab and ghost clicks must not recompute (or collapse) the designs.
+let designsDirty = true;
 let schemes: Scheme[] | null = null;
 function scheduleDesigns(vm: ViewModel, input: PlotInput | null) {
   window.clearTimeout(designTimer);
   schemes = null;
-  if (vm.analysis && vm.analysis.siteArea > MAX_DESIGN_SITE_M2) {
+  lastVm = vm;
+  if (!input || !vm.analysis) {
+    // Nothing valid to design: say so, and take any stale design off the map.
+    $("schemes-body").innerHTML = renderDesigns(vm, null, false);
+    showScheme(map, frameOf(store.get()), null);
+    setEnvelopeVisible(true);
+    return;
+  }
+  if (vm.analysis.siteArea > MAX_DESIGN_SITE_M2) {
     $("schemes-body").innerHTML = `<p class="muted">Concept designs are limited to plots up to ${MAX_DESIGN_SITE_M2.toLocaleString("en")} m² (5 ha). The envelope and the rules above still apply to this plot.</p>`;
     showScheme(map, frameOf(store.get()), null);
     setEnvelopeVisible(true);
     return;
   }
   $("schemes-body").innerHTML = renderDesigns(vm, null, true);
-  if (!input || !vm.analysis) return;
   designTimer = window.setTimeout(() => {
     const st = store.get();
     schemes = designSchemes(input, vm.analysis!, vm.stationM);
@@ -118,7 +128,7 @@ function scheduleDesigns(vm: ViewModel, input: PlotInput | null) {
 function paintDesigns() {
   qaCount.designs++;
   const st = store.get();
-  const { vm } = compute(st);
+  const vm: ViewModel = { ...lastVm!, s: st }; // same analysis as the last render; only the selection may differ
   $("schemes-body").innerHTML = renderDesigns(vm, schemes, false);
   const chosen = schemes?.find((d) => d.kind === st.design) ?? null;
   showScheme(map, frameOf(st), chosen);
@@ -135,8 +145,9 @@ let autoView = true;
 
 let raf = 0;
 let inputsDirty = true;
-function schedule(inputs = true) {
+function schedule(inputs = true, designs = true) {
   inputsDirty = inputsDirty || inputs;
+  designsDirty = designsDirty || designs;
   if (raf) return;
   raf = requestAnimationFrame(() => {
     raf = 0;
@@ -147,12 +158,15 @@ function schedule(inputs = true) {
 function render() {
   if (!ready || !ctx) return;
   const s = store.get();
+  const redoDesigns = designsDirty;
+  designsDirty = false;
   const { vm, input } = compute(s);
   if (autoView && vm.analysis) {
     autoView = false;
     if (!vm.analysis.high.allowed && s.view === "high") {
       store.set({ view: "low" });
-      schedule(false);
+      designsDirty = designsDirty || redoDesigns;
+      schedule(false, false);
       return;
     }
   }
@@ -182,7 +196,8 @@ function render() {
   $("floors-body").innerHTML = renderFloors(vm);
   renderPresetButtons();
   writeHash(s);
-  scheduleDesigns(vm, input);
+  if (redoDesigns) scheduleDesigns(vm, input);
+  else lastVm = vm;
   qaCount.render++;
 }
 
@@ -247,7 +262,7 @@ function wirePanel() {
       schedule();
     } else if (act === "view") {
       store.set({ view: t.dataset.view as "low" | "high" });
-      schedule(false);
+      schedule(false, false);
     } else if (act === "design") {
       const kind = t.dataset.kind as AppState["design"];
       store.set({ design: s.design === kind ? null : kind });
@@ -260,7 +275,7 @@ function wirePanel() {
     } else if (act === "ghost") {
       const r = t.dataset.rule as RuleId;
       store.set({ ghost: s.ghost === r ? null : r });
-      schedule(false);
+      schedule(false, false);
     }
   });
   panel.addEventListener("change", (e) => {
@@ -315,23 +330,22 @@ if (window.matchMedia("(max-width: 860px)").matches) ($("legend-box") as HTMLDet
 
 /** Print a one-page summary: capture the current 3D view as an image, expand every section, then print. */
 async function printSummary() {
-  const s = store.get();
   $("print-meta").textContent = `${new Date().toLocaleString("en-GB")} · ${location.href}`;
-  try {
-    await new Promise<void>((resolve) => {
-      map.once("render", () => {
-        try {
-          ($("print-map") as HTMLImageElement).src = map.getCanvas().toDataURL("image/png");
-        } catch {
-          /* tainted or unavailable canvas: print without the map picture */
-        }
-        resolve();
-      });
-      map.triggerRepaint();
+  const img = $("print-map") as HTMLImageElement;
+  img.removeAttribute("src"); // never print a picture left over from an earlier plot
+  await new Promise<void>((resolve) => {
+    const giveUp = window.setTimeout(resolve, 1500); // the map may not render (hidden tab): print without a picture
+    map.once("render", () => {
+      try {
+        img.src = map.getCanvas().toDataURL("image/png");
+      } catch {
+        img.removeAttribute("src");
+      }
+      window.clearTimeout(giveUp);
+      resolve();
     });
-  } finally {
-    void s;
-  }
+    map.triggerRepaint();
+  });
   await new Promise((r) => setTimeout(r, 150));
   window.print();
 }

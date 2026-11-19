@@ -27,6 +27,8 @@ export interface AppState {
   mode: "idle" | "draw" | "edit";
 }
 
+const SCHEME_KINDS: (SchemeKind | null)[] = ["tower", "slab", "twin", "block", "garden"];
+
 export const DEFAULT_BONUS: Bonus = { energyLevel: 0, waterUnits: 0, affordableArea: 0 };
 
 export function stateFromPreset(id: string): AppState {
@@ -110,7 +112,7 @@ export function readHash(): AppState | null {
         bonus: { energyLevel: j.b?.[0] ?? 0, waterUnits: j.b?.[1] ?? 0, affordableArea: j.b?.[2] ?? 0 },
         disabled: j.d ?? [],
         view: j.v === "low" ? "low" : "high",
-        design: j.k ?? null,
+        design: SCHEME_KINDS.includes(j.k) ? j.k : null,
       };
     } catch {
       return null;

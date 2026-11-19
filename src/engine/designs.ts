@@ -9,12 +9,12 @@
  */
 import type { XY } from "../geo/local";
 import {
-  AVG_UNIT, BETWEEN_BUILDINGS, FLOOR_H, FRONT_SPACE_PERIMETER_SHARE, FRONT_SPACE_W, MIN_PLATE_M2, NET_EFFICIENCY, PARKING_AREA_PER_BAY,
+  AVG_UNIT, BETWEEN_BUILDINGS, FLOOR_H, HEIGHT_PLANE_RATIO, HOTEL_ROOMS_RESTRICTED, SIDE_HIGHRISE, SIDE_LOWRISE, roadSetbackFromBoundary, FRONT_SPACE_PERIMETER_SHARE, FRONT_SPACE_W, MIN_PLATE_M2, NET_EFFICIENCY, PARKING_AREA_PER_BAY,
   PERMEABLE_SHARE, SHARE_UNITS_60, type BuildingUse,
 } from "./constants";
-import { prepare, type Envelope, type PlotInput } from "./envelope";
+import { planeRoads, prepare, type Envelope, type PlotInput } from "./envelope";
 import {
-  difference, intersect, orientedRect, perimeter, regionArea, regionContains, regionToPolygons, unionAll, type EdgeInfo, type Region,
+  intersect, orientedRect, perimeter, polygonsContain, regionArea, regionToPolygons, unionAll, type EdgeInfo, type Region,
 } from "./geom";
 import { parkingRequired } from "./parking";
 import { openSpaceRequired, roadTier, useLimits, type Analysis } from "./rules";
@@ -84,8 +84,6 @@ const TWIN_MAX_W = 30;
 const MIN_TWIN_W = 16;
 const DRIVE_TURN_M2 = 150; // driveway turning area (assumption)
 const DRIVE_W = 6;
-// Clipper works in whole millimetres; rotated edges can leave slivers of about 1 mm x the plate's perimeter.
-const LEAK_TOLERANCE_M2 = 0.5;
 
 const n0 = (x: number) => Math.round(x).toLocaleString("en");
 const pct = (x: number) => `${(x * 100).toFixed(1)} %`;
@@ -216,16 +214,81 @@ function buildStack(f: Frame, env: Envelope, lay: Layout, P: number, cap: number
 
 function frontClearLength(f: Frame, ground: Region, depth: number): number {
   const step = 0.5;
+  const polys = regionToPolygons(ground); // converted once; the loops below test thousands of points
   let clear = 0;
   for (let x = step / 2; x < f.len; x += step) {
     let blocked = false;
     for (let y = step / 2; y < depth && !blocked; y += step) {
-      const p: XY = [f.o[0] + f.u[0] * x + f.v[0] * y, f.o[1] + f.v[1] * y + f.u[1] * x];
-      if (regionContains(ground, p)) blocked = true;
+      const p: XY = [f.o[0] + f.u[0] * x + f.v[0] * y, f.o[1] + f.u[1] * x + f.v[1] * y];
+      if (polygonsContain(polys, p)) blocked = true;
     }
     if (!blocked) clear += step;
   }
   return clear;
+}
+
+/** Distance from a point to a segment. */
+function distPointSeg(p: XY, a: XY, b: XY): number {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+}
+
+/** Smallest distance between a polygon ring and a segment. */
+function distRingSeg(ring: XY[], a: XY, b: XY): number {
+  let d = Infinity;
+  for (let i = 0; i < ring.length; i++) {
+    const p = ring[i];
+    const q = ring[(i + 1) % ring.length];
+    d = Math.min(d, distPointSeg(p, a, b), distPointSeg(a, p, q), distPointSeg(b, p, q));
+  }
+  return d;
+}
+
+interface Verification {
+  /** Smallest (actual distance - required distance) over all plates and all boundary edges; negative = a violation. */
+  setbackMargin: number;
+  /** Smallest actual distance from any plate to any plot boundary (m). */
+  closest: number;
+  /** Smallest (2 x distance + 2 x ROW - height) over plate corners; negative = above the 2:1 plane. */
+  planeMargin: number;
+}
+
+/**
+ * Re-check a design with plain distance arithmetic, independent of the clipper slices that shaped it:
+ * boundary distances from every plate to every plot edge, and the 2:1 height plane at every plate corner.
+ */
+function verifyGeometry(input: PlotInput, p: ReturnType<typeof prepare>, mode: "low" | "high", floors: SchemeFloor[]): Verification {
+  const off = new Set(input.disabled);
+  const roadRow = new Map(p.roads.map((r) => [r.edge, r.row]));
+  const required = p.edges.map((_, i) => {
+    if (roadRow.has(i)) return off.has("road-setback") ? 0 : mode === "high" ? SIDE_HIGHRISE : roadSetbackFromBoundary(roadRow.get(i)!);
+    return off.has("boundary") ? 0 : mode === "high" ? SIDE_HIGHRISE : SIDE_LOWRISE;
+  });
+  const planes = planeRoads(p.edges, p.roads, off);
+  let setbackMargin = Infinity;
+  let closest = Infinity;
+  let planeMargin = Infinity;
+  for (const fl of floors) {
+    for (const part of fl.parts) {
+      for (const poly of regionToPolygons(part.region)) {
+        const ring = poly[0];
+        p.edges.forEach((e, i) => {
+          const d = distRingSeg(ring, e.a, e.b);
+          closest = Math.min(closest, d);
+          setbackMargin = Math.min(setbackMargin, d - required[i]);
+        });
+        for (const pl of planes) {
+          for (const v of ring) {
+            const t = (v[0] - pl.edge.a[0]) * pl.edge.inward[0] + (v[1] - pl.edge.a[1]) * pl.edge.inward[1]; // inward distance from the road edge
+            planeMargin = Math.min(planeMargin, HEIGHT_PLANE_RATIO * (pl.row + t) - fl.zTop);
+          }
+        }
+      }
+    }
+  }
+  return { setbackMargin, closest, planeMargin };
 }
 
 interface Def {
@@ -350,15 +413,19 @@ function makeScheme(input: PlotInput, a: Analysis, p: ReturnType<typeof prepare>
     note: "Car parking floors count toward floor area in this tool.",
   });
 
-  let leak = 0;
-  for (const fl of st.floors) {
-    const slice = env.slices[fl.floor - 1];
-    for (const part of fl.parts) leak += regionArea(difference(part.region, slice.region));
-  }
-  const insideEnvelope = leak < LEAK_TOLERANCE_M2;
+  const ver = verifyGeometry(input, p, d.mode, st.floors);
+  const TOL = 0.05; // m: clipper rounds to whole millimetres
+  const setbacksOk = ver.setbackMargin >= -TOL;
+  const planeOk = ver.planeMargin >= -TOL;
+  const insideEnvelope = setbacksOk && planeOk;
   checks.push({
-    id: "envelope", label: "Inside the allowed envelope on every floor", value: insideEnvelope ? "yes" : `${leak.toFixed(1)} m² outside`,
-    limit: "setbacks + 2:1 height plane", pass: insideEnvelope, source: "MR 55 arts. 41, 44, 50; MR 33 art. 4",
+    id: "envelope", label: "Setbacks and the 2:1 height plane hold on every floor",
+    value: insideEnvelope
+      ? `yes: tightest setback margin ${Math.max(0, ver.setbackMargin).toFixed(2)} m, tightest height margin ${Number.isFinite(ver.planeMargin) ? Math.max(0, ver.planeMargin).toFixed(2) + " m" : "n/a"}`
+      : `${setbacksOk ? "" : `a setback is short by ${(-ver.setbackMargin).toFixed(2)} m. `}${planeOk ? "" : `a floor is ${(-ver.planeMargin).toFixed(2)} m above the plane.`}`,
+    limit: "boundary distances and height ≤ 2 × (road width + distance in)", pass: insideEnvelope,
+    source: "MR 55 arts. 41, 44, 50; MR 33 art. 4",
+    note: "Re-checked from the plate corners with plain distances, not from the envelope slices that shaped the plates.",
   });
   checks.push({
     id: "open-space", label: "Open space", value: `${n0(open)} m² (${pct(open / site)} of the plot)`,
@@ -404,8 +471,8 @@ function makeScheme(input: PlotInput, a: Analysis, p: ReturnType<typeof prepare>
       pass: gate ? gate.status !== "blocked" : true, source: "MR 33 art. 2",
     });
     checks.push({
-      id: "fire-road", label: "6 m clear all round the building", value: "6 m setback on every side",
-      limit: "≥ 6 m from every boundary and road", pass: insideEnvelope, source: "MR 33 arts. 3-4",
+      id: "fire-road", label: "6 m clear all round the building", value: `closest approach to a boundary or road: ${ver.closest.toFixed(2)} m`,
+      limit: "≥ 6 m from every boundary and road", pass: ver.closest >= SIDE_HIGHRISE - TOL, source: "MR 33 arts. 3-4",
       note: "The road may be grass-paved; it must stay free of structures.",
     });
   } else {
@@ -420,10 +487,16 @@ function makeScheme(input: PlotInput, a: Analysis, p: ReturnType<typeof prepare>
 
   const ul = useLimits(input.use, tier, stationM);
   if (input.use === "office") {
-    checks.push({ id: "use", label: "Office floor area for this plot", value: `${n0(st.usableGfa)} m²`, limit: `≤ ${Number.isFinite(ul.maxGfa) ? n0(ul.maxGfa) + " m²" : "no limit"}`, pass: st.usableGfa <= ul.maxGfa + 1e-6, source: ul.source });
+    checks.push({
+      id: "use", label: "Office floor area for this plot", value: `${n0(st.usableGfa)} m²`,
+      limit: `≤ ${Number.isFinite(a.usableCap) ? n0(a.usableCap) + " m²" : "no limit"}`, pass: st.usableGfa <= a.usableCap + 1e-6, source: ul.source,
+    });
   } else if (input.use === "hotel") {
-    const ok = units <= 50 || tier >= 16 || (stationM !== null && stationM <= 500);
-    checks.push({ id: "use", label: "Hotel size for this plot", value: `${units} rooms`, limit: "≤ 50 rooms unless road ROW ≥ 16 m or within 500 m of a rail station", pass: ok, source: ul.source });
+    checks.push({
+      id: "use", label: "Hotel size for this plot", value: `${units} rooms`,
+      limit: Number.isFinite(a.usableCap) ? `≤ ${HOTEL_ROOMS_RESTRICTED} rooms (road ROW under 16 m and no rail station within 500 m)` : "no room limit (wide road or near a rail station)",
+      pass: !Number.isFinite(a.usableCap) || units <= HOTEL_ROOMS_RESTRICTED, source: ul.source,
+    });
   }
 
   const passes = checks.every((c) => c.pass !== false);

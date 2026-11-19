@@ -74,6 +74,21 @@ describe("every design respects the rules it claims to", () => {
   it("ground coverage leaves the required open space", () => {
     for (const s of schemes) expect(regionArea(prepare(input).site) - s.groundCoverage).toBeGreaterThan(0.3 * 1200 - 1e-6);
   });
+  it("the envelope check is re-verified with plain distances and reports real margins", () => {
+    for (const s of schemes) {
+      const env = s.checks.find((c) => c.id === "envelope")!;
+      expect(env.pass).toBe(true);
+      expect(env.value).toMatch(/^yes: tightest setback margin \d+\.\d\d m/);
+    }
+  });
+  it("the 6 m clearance check reports the closest approach to a boundary (6.00 m for plates set 6 m in)", () => {
+    for (const s of schemes.filter((x) => x.mode === "high")) {
+      const fr = s.checks.find((c) => c.id === "fire-road")!;
+      expect(fr.pass).toBe(true);
+      const m = fr.value.match(/(\d+\.\d\d) m/);
+      expect(Number(m![1])).toBeGreaterThanOrEqual(5.95);
+    }
+  });
   it("a high-rise design really is 23 m or taller; a low-rise design is not", () => {
     for (const s of schemes) {
       if (s.mode === "high") expect(s.height).toBeGreaterThanOrEqual(23);

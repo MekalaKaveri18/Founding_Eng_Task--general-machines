@@ -1,6 +1,7 @@
-import { ZONES, type BuildingUse, type ZoneId } from "../engine/constants";
+import { ZONES, type ZoneId } from "../engine/constants";
 import type { Envelope, RuleId } from "../engine/envelope";
 import type { Analysis, RuleRow } from "../engine/rules";
+import { AVG_UNIT, FLOOR_H, NET_EFFICIENCY, PARKING_AREA_PER_BAY, type BuildingUse } from "../engine/constants";
 import type { Scheme, SchemeFloor } from "../engine/designs";
 import { groupSlices, MODE_COLORS, RULE_COLORS, RULE_LABELS, USE_COLORS, USE_LABELS } from "../map/envelopeLayers";
 import type { AppState } from "../state";
@@ -185,7 +186,13 @@ function checkIcon(pass: boolean | null) {
       : `<span class="ck bad" title="Fail">✗</span>`;
 }
 
-function schemeDetail(s: Scheme, site: number): string {
+function assumptionsNote(use: BuildingUse): string {
+  const net = `net area ${(NET_EFFICIENCY * 100).toFixed(0)} % of the usable gross area`;
+  const unit = use === "office" ? "" : `; average net ${use === "hotel" ? "room" : "unit"} ${AVG_UNIT[use]} m²`;
+  return `Assumptions: ${FLOOR_H} m per floor; ${net}${unit}; parking counts toward floor area; about ${PARKING_AREA_PER_BAY} m² of floor per car space.`;
+}
+
+function schemeDetail(s: Scheme, site: number, use: BuildingUse): string {
   const checks = s.checks
     .map(
       (c) => `<tr class="${c.pass === false ? "fail" : ""}"><td>${checkIcon(c.pass)}</td>
@@ -213,7 +220,7 @@ function schemeDetail(s: Scheme, site: number): string {
     <table class="ft"><thead><tr><th>Floor</th><th class="l">Use and plate (m²)</th><th>Plate</th><th>×</th><th>Subtotal</th><th>Cumulative</th></tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr><td colspan="5" class="l">Total floor area = ${(s.gfa / site).toFixed(2)} × the plot</td><td><b>${n0(s.gfa)}</b></td></tr></tfoot></table>
-    <p class="note">Assumptions: 3.2 m per floor; net area 78 % of residential gross; average net unit 45 m² (condo); parking counts toward floor area; about 30 m² per car space.</p></div>`;
+    <p class="note">${assumptionsNote(use)}</p></div>`;
 }
 
 export function renderDesigns(vm: ViewModel, schemes: Scheme[] | null, pending: boolean): string {
@@ -234,7 +241,7 @@ export function renderDesigns(vm: ViewModel, schemes: Scheme[] | null, pending: 
           <div class="sc-blurb">${esc(d.blurb)}</div>
           <div class="sc-stats"><span><b>${d.floors.length}</b> floors · ${n1(d.height)} m</span><span><b>${n0(d.gfa)}</b> m² (${(d.gfa / site).toFixed(2)}×)</span>
             <span><b>${d.units}</b> ${d.unitLabel}</span><span><b>${d.parkingProvided}</b>/${d.parkingRequired} car spaces</span></div>
-        </button>${sel ? schemeDetail(d, site) : ""}</div>`;
+        </button>${sel ? schemeDetail(d, site, s.use) : ""}</div>`;
     })
     .join("");
   const back = s.design ? ` <button class="mini on" data-act="design-clear" style="--c:#4458e0">back to the envelope</button>` : "";

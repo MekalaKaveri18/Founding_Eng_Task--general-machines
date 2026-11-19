@@ -58,7 +58,7 @@ export function cloneRegion(r: Region): Region {
 
 export function unionAll(parts: Region[]): Region {
   let acc = new Paths64();
-  for (const p of parts) acc = Clipper.Union(cloneRegion(acc), cloneRegion(p), FillRule.NonZero);
+  for (const p of parts) acc = Clipper.Union(acc, cloneRegion(p), FillRule.NonZero); // acc is already private: never handed out until the end
   return acc;
 }
 
@@ -216,14 +216,19 @@ export function perimeter(r: Region): number {
   return total;
 }
 
-/** Point containment for a region with holes. */
-export function regionContains(r: Region, p: XY): boolean {
-  for (const poly of regionToPolygons(r)) {
+/** Point containment for polygons-with-holes (as returned by regionToPolygons). */
+export function polygonsContain(polys: XY[][][], p: XY): boolean {
+  for (const poly of polys) {
     if (!inRing(p, poly[0])) continue;
     if (poly.slice(1).some((h) => inRing(p, h))) continue;
     return true;
   }
   return false;
+}
+
+/** Point containment for a region with holes. Convert once with regionToPolygons when testing many points. */
+export function regionContains(r: Region, p: XY): boolean {
+  return polygonsContain(regionToPolygons(r), p);
 }
 
 /** Oriented rectangle in a local frame (origin o, axes u and v), as a region. */

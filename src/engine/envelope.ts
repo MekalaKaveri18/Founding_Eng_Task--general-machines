@@ -129,7 +129,7 @@ export function highRiseGate(edges: EdgeInfo[], roads: Frontage[]) {
 }
 
 /** Distance from the road's opposite boundary line for the height plane: edge line shifted by ROW. */
-function planeRoads(edges: EdgeInfo[], roads: Frontage[], disabled: Set<RuleId>) {
+export function planeRoads(edges: EdgeInfo[], roads: Frontage[], disabled: Set<RuleId>) {
   if (disabled.has("height-plane") || roads.length === 0) return [] as { edge: EdgeInfo; row: number }[];
   const withEdge = roads.filter((r) => edges[r.edge]).map((r) => ({ edge: edges[r.edge], row: r.row, index: r.edge }));
   if (withEdge.length <= 1) return withEdge;

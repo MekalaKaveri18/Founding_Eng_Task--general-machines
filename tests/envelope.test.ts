@@ -97,6 +97,14 @@ describe("high-rise envelope on the same plot (MR 33: 6 m from every boundary an
     expect(env.slices[26].area).toBeCloseTo(50.4, 1);
     expect(env.maxHeight).toBeCloseTo(86.4, 9);
   });
+  it("the 9600 m2 FAR cap is reached on floor 25: floors 1-24 hold 9568.8 m2 and 31.2 m2 are left for a partial floor", () => {
+    // floors 1-11: 504 each = 5544; floor k >= 12: 18 x (46 - 1.6k). Sum for k = 12..24 = 4024.8. Total 9568.8.
+    expect(env.capFloor).toBe(24);
+    expect(env.slices[23].cumulative).toBeCloseTo(9568.8, 1);
+    expect(env.allowedFloors).toBe(25);
+    expect(env.allowedHeight).toBeCloseTo(80, 9);
+    expect(env.allowedGfa).toBeCloseTo(9600, 6);
+  });
   it("is capped by FAR 8 x 1200 = 9600 m2 (below the 10:1 limit of 12,000)", () => {
     expect(env.gfaCap).toBeCloseTo(9600, 6);
     expect(env.capFloor).toBeGreaterThan(0);
@@ -130,7 +138,7 @@ describe("rule toggles change the envelope", () => {
   it("ghost volume of the height plane is the removed wedge, and the ghost areas are non-trivial", () => {
     const g = ghostFor(base(), "high", "height-plane");
     expect(g.length).toBeGreaterThan(0);
-    // floor 12 loses 18 x 1.2 = 21.6 m2 compared with the full 504 m2 plate
+    // floor 12 loses 18 x 1.2 = 21.6 m2, minus the 5 cm gap kept from the envelope wall (0.05 x 18 m = 0.9 m2)
     const f12 = g.find((x) => x.floor === 12)!;
     expect(f12).toBeDefined();
     const area = f12.polys.reduce((s, poly) => {
@@ -143,7 +151,7 @@ describe("rule toggles change the envelope", () => {
       }
       return s + Math.abs(a / 2);
     }, 0);
-    expect(area).toBeCloseTo(21.6, 1);
+    expect(area).toBeCloseTo(21.6 - 0.05 * 18, 1);
   });
 });
 

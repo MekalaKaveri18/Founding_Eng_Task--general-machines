@@ -146,6 +146,18 @@ export function bufferOfEdge(e: EdgeInfo, d: number): Region {
   return unionAll([regionFromRing(toCCW(rect)), disc(e.a, d), disc(e.b, d)]);
 }
 
+
+/** Region grown by d metres on every side (union of edge stadiums plus the region itself). Clipper's own offset is not used, see file header. */
+export function bufferRegion(r: Region, d: number): Region {
+  const parts: Region[] = [r];
+  for (const path of r) {
+    const ring: XY[] = path.map((p) => [p.x / S, p.y / S] as XY);
+    if (ring.length < 3) continue;
+    for (const e of edgesOf(ring)) if (e.length > 1e-6) parts.push(bufferOfEdge(e, d));
+  }
+  return unionAll(parts);
+}
+
 /** Group clipper output into polygons with holes, for rendering. Each polygon = [outer, ...holes], in metres. */
 export function regionToPolygons(r: Region): XY[][][] {
   const outers: { ring: XY[]; holes: XY[][] }[] = [];

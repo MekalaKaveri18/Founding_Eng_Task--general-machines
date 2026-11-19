@@ -22,17 +22,31 @@
         <nav class="presets" id="presets" aria-label="Preset plots"></nav>
       </header>
       <aside class="panel" id="panel">
-        <section class="card" id="site-card">
-          <h2>Site</h2>
+        <div id="banner"></div>
+        <section class="card">
+          <h2>Plot</h2>
+          <div id="plot-name" class="plot-name"></div>
           <div id="site-body"></div>
         </section>
-        <section class="card" id="rules-card">
+        <section class="card">
+          <h2>What are you building?</h2>
+          <div id="inputs-body"></div>
+        </section>
+        <section class="card">
+          <h2>Allowed envelope</h2>
+          <div id="result-body"></div>
+        </section>
+        <section class="card">
           <h2>Rules that apply</h2>
-          <div id="rules-body" class="muted">Computed in the next build step.</div>
+          <p class="muted tight">Every limit for this plot, with its source. Switch a rule off to see the envelope without it, or show the volume it removes.</p>
+          <div id="rules-body"></div>
+        </section>
+        <section class="card">
+          <details><summary class="card-sum">Floor-by-floor areas</summary><div id="floors-body"></div></details>
         </section>
         <section class="card" id="schemes-card">
           <h2>Concept designs</h2>
-          <div id="schemes-body" class="muted">Computed in the next build step.</div>
+          <div id="schemes-body" class="muted">Coming next: three designs that fit the envelope, each with a pass/fail checklist.</div>
         </section>
       </aside>
       <main class="mapwrap">

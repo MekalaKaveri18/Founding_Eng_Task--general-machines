@@ -69,10 +69,13 @@ def main():
     # 1. Sukhumvit Soi 22: irregular pentagon on the east side of the soi.
     soi22 = list(reversed(line_of(roads, 156261422)))  # now runs south from Sukhumvit
     row22 = 12.0
-    p, u, v = frame_on_road(soi22, origin, 340, side=+1)  # left of a southbound line = east
-    poly = place(p, u, v, row22 / 2, [(0, 0), (52, 0), (55, 38), (28, 62), (-4, 50)])
+    # West side of the soi, 330 m south of Sukhumvit Road. Position chosen by search so the plot covers only
+    # small buildings: none cut by the boundary and no tall tower underneath (the east side is the 118 m Marriott complex).
+    p, u, v = frame_on_road(soi22, origin, 330, side=-1)
+    w, d = 46, 66
+    poly = place(p, u, v, row22 / 2, [(0, 0), (w, 0), (w * 1.05, d * 0.65), (w * 0.55, d), (-w * 0.07, d * 0.83)])
     presets.append({"id": "soi22", "name": "Sukhumvit Soi 22", "zone": "Y10",
-                    "note": "Mid-soi lot, east side. Zone ย.10 per agent listings for Soi 22 (not an official certificate).",
+                    "note": "Mid-soi lot, west side. Zone ย.10 per agent listings for Soi 22 (not an official certificate).",
                     "roads": [{"edge": 0, "row": row22, "name": "Soi Sukhumvit 22"}],
                     "coords": [to_ll(q, origin) for q in poly]})
 

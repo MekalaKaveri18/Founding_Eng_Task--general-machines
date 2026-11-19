@@ -4,7 +4,7 @@ A browser tool for a Bangkok developer's first question before paying an archite
 
 Scope: the **Brown zone (high-density residential, ย.8 / ย.9 / ย.10)** under the Bangkok Comprehensive Plan B.E. 2556, with Ministerial Regulations 33 and 55 and the Bangkok Building Control Ordinance B.E. 2544.
 
-Status: work in progress. Site context, presets and the 3D scene are done. The rules engine, envelope and concept designs are next.
+Status: work in progress. Site context, presets, rules engine and the live envelope UI are done. Concept designs are next.
 
 ## Run
 

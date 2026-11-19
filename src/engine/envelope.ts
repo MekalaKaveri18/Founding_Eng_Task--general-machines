@@ -6,7 +6,7 @@ import {
   type BuildingUse, type ZoneId,
 } from "./constants";
 import {
-  bufferOfEdge, difference, edgesOf, halfPlaneFromEdge, isEmpty, regionArea, regionFromRing,
+  bufferOfEdge, bufferRegion, difference, edgesOf, halfPlaneFromEdge, isEmpty, regionArea, regionFromRing,
   regionToPolygons, stripAlongEdge, toCCW, unionAll, type EdgeInfo, type Region,
 } from "./geom";
 
@@ -59,6 +59,10 @@ export interface Envelope {
   geometricGfa: number;
   /** Floors fully inside the FAR cap (the floor after this one crosses the cap). */
   capFloor: number;
+  /** Floors the allowed floor area actually reaches: capFloor, plus one partial floor if at least a minimum plate is left. */
+  allowedFloors: number;
+  /** Height of those floors (m). */
+  allowedHeight: number;
   maxHeight: number;
   /** GFA actually allowed once FAR (and the 10:1 / 10,000 m2 limits) are applied. */
   allowedGfa: number;
@@ -168,7 +172,7 @@ export function computeEnvelope(input: PlotInput, mode: Mode): Envelope {
 
   const empty = (reason: string): Envelope => ({
     mode, allowed: false, reason, footprint: unionAll([]), slices: [], geometricGfa: 0, capFloor: 0,
-    maxHeight: 0, allowedGfa: 0, gfaCap,
+    allowedFloors: 0, allowedHeight: 0, maxHeight: 0, allowedGfa: 0, gfaCap,
   });
 
   if (mode === "high") {
@@ -204,8 +208,15 @@ export function computeEnvelope(input: PlotInput, mode: Mode): Envelope {
   if (Number.isFinite(gfaCap)) {
     capFloor = slices.filter((s) => s.cumulative <= gfaCap).length;
   }
+  let allowedFloors = capFloor;
+  if (capFloor < slices.length) {
+    const used = capFloor ? slices[capFloor - 1].cumulative : 0;
+    if (gfaCap - used >= MIN_PLATE_M2) allowedFloors = capFloor + 1; // a partial top floor
+  }
   return {
     mode,
+    allowedFloors,
+    allowedHeight: allowedFloors * FLOOR_H,
     allowed: slices.length > 0,
     reason: slices.length ? undefined : "The height plane leaves no usable floor.",
     footprint,
@@ -218,6 +229,8 @@ export function computeEnvelope(input: PlotInput, mode: Mode): Envelope {
   };
 }
 
+export const GHOST_GAP = 0.05; // metres
+
 /** The volume a single rule removes: floor-by-floor difference between "rule off" and "all rules on". */
 export function ghostFor(input: PlotInput, mode: Mode, rule: RuleId): { floor: number; zBase: number; zTop: number; polys: XY[][][] }[] {
   const on = computeEnvelope(input, mode);
@@ -225,7 +238,8 @@ export function ghostFor(input: PlotInput, mode: Mode, rule: RuleId): { floor: n
   const out: { floor: number; zBase: number; zTop: number; polys: XY[][][] }[] = [];
   for (const s of without.slices) {
     const mine = on.slices.find((t) => t.floor === s.floor);
-    const gone = mine ? difference(s.region, mine.region) : s.region;
+    // Keep a 5 cm gap from the envelope's walls so ghost and envelope faces are never coincident (no z-fighting).
+    const gone = mine ? difference(difference(s.region, mine.region), bufferRegion(mine.region, GHOST_GAP)) : s.region;
     if (!isEmpty(gone, 0.5)) out.push({ floor: s.floor, zBase: s.zBase, zTop: s.zTop, polys: regionToPolygons(gone) });
   }
   return out;

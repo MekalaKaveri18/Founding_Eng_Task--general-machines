@@ -3,7 +3,7 @@
   "id": "soi22",
   "name": "Sukhumvit Soi 22",
   "zone": "Y10",
-  "note": "Mid-soi lot, east side. Zone ย.10 per agent listings for Soi 22 (not an official certificate).",
+  "note": "Mid-soi lot, west side. Zone ย.10 per agent listings for Soi 22 (not an official certificate).",
   "roads": [
    {
     "edge": 0,
@@ -13,27 +13,27 @@
   ],
   "coords": [
    [
-    100.5651668,
-    13.7305099
+    100.5650556,
+    13.7306003
    ],
    [
-    100.5651694,
-    13.7300396
+    100.5650541,
+    13.7301843
    ],
    [
-    100.5655209,
-    13.7300143
+    100.5646573,
+    13.7301649
    ],
    [
-    100.5657415,
-    13.7302596
+    100.5644444,
+    13.7303736
    ],
    [
-    100.565629,
-    13.7305485
+    100.5645491,
+    13.7306312
    ]
   ],
-  "area_m2_approx": 2985
+  "area_m2_approx": 2837
  },
  {
   "id": "narrow",

@@ -124,9 +124,18 @@ export function showGhost(
 ) {
   const src = map.getSource("ghost") as GeoJSONSource;
   if (!ghost || !rule) return src.setData(EMPTY);
+  // Merge consecutive floors with identical outlines into one slab (stacked translucent faces would show as dark bands).
+  const sig = (g: { polys: XY[][][] }) => JSON.stringify(g.polys.map((poly) => poly.map((r) => r.map((p) => [p[0].toFixed(3), p[1].toFixed(3)]))));
+  const merged: { base: number; top: number; polys: XY[][][]; key: string }[] = [];
+  for (const g of ghost) {
+    const key = sig(g);
+    const last = merged[merged.length - 1];
+    if (last && last.key === key && Math.abs(last.top - g.zBase) < 1e-6) last.top = g.zTop;
+    else merged.push({ base: g.zBase + (merged.length ? EPS : 0), top: g.zTop, polys: g.polys, key });
+  }
   src.setData({
     type: "FeatureCollection",
-    features: ghost.map((g) => feature(frame, g.polys, { base: g.zBase + EPS, top: g.zTop, color: RULE_COLORS[rule] })),
+    features: merged.map((g) => feature(frame, g.polys, { base: g.base, top: g.top, color: RULE_COLORS[rule] })),
   });
 }
 

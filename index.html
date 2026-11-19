@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plot Envelope · Bangkok</title>
+    <meta name="description" content="What can I build on this Bangkok plot? Brown-zone rules, allowable envelope and concept designs in 3D." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <div class="brand-title">Plot Envelope</div>
+            <div class="brand-sub">Bangkok · Brown zone ย.8–ย.10 · B.E. 2556</div>
+          </div>
+        </div>
+        <nav class="presets" id="presets" aria-label="Preset plots"></nav>
+      </header>
+      <aside class="panel" id="panel">
+        <section class="card" id="site-card">
+          <h2>Site</h2>
+          <div id="site-body"></div>
+        </section>
+        <section class="card" id="rules-card">
+          <h2>Rules that apply</h2>
+          <div id="rules-body" class="muted">Computed in the next build step.</div>
+        </section>
+        <section class="card" id="schemes-card">
+          <h2>Concept designs</h2>
+          <div id="schemes-body" class="muted">Computed in the next build step.</div>
+        </section>
+      </aside>
+      <main class="mapwrap">
+        <div id="map"></div>
+        <div class="legend" id="legend"></div>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

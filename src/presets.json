@@ -1,0 +1,111 @@
+[
+ {
+  "id": "soi22",
+  "name": "Sukhumvit Soi 22",
+  "zone": "Y10",
+  "note": "Mid-soi lot, east side. Zone ย.10 per agent listings for Soi 22 (not an official certificate).",
+  "roads": [
+   {
+    "edge": 0,
+    "row": 12.0,
+    "name": "Soi Sukhumvit 22"
+   }
+  ],
+  "coords": [
+   [
+    100.5651668,
+    13.7305099
+   ],
+   [
+    100.5651694,
+    13.7300396
+   ],
+   [
+    100.5655209,
+    13.7300143
+   ],
+   [
+    100.5657415,
+    13.7302596
+   ],
+   [
+    100.565629,
+    13.7305485
+   ]
+  ],
+  "area_m2_approx": 2985
+ },
+ {
+  "id": "narrow",
+  "name": "Narrow 6 m soi lot",
+  "zone": "Y10",
+  "note": "Soi Sai Nam Thip 1, off Soi 22. Shows how a narrow soi limits height and blocks high-rise.",
+  "roads": [
+   {
+    "edge": 0,
+    "row": 6.0,
+    "name": "Soi Sai Nam Thip 1"
+   }
+  ],
+  "coords": [
+   [
+    100.5647042,
+    13.7289562
+   ],
+   [
+    100.5644824,
+    13.72895
+   ],
+   [
+    100.5644742,
+    13.7292302
+   ],
+   [
+    100.5646953,
+    13.7292635
+   ]
+  ],
+  "area_m2_approx": 780
+ },
+ {
+  "id": "corner",
+  "name": "Sukhumvit Rd corner lot",
+  "zone": "Y10",
+  "note": "Corner of Sukhumvit Road (ROW 30 m, assumed) and Soi 22. Two frontages; the wider road governs height (MR 55 art. 46).",
+  "roads": [
+   {
+    "edge": 0,
+    "row": 30.0,
+    "name": "Sukhumvit Road"
+   },
+   {
+    "edge": 4,
+    "row": 12.0,
+    "name": "Soi Sukhumvit 22"
+   }
+  ],
+  "coords": [
+   [
+    100.5652214,
+    13.7334457
+   ],
+   [
+    100.5656873,
+    13.733119
+   ],
+   [
+    100.5656655,
+    13.7327035
+   ],
+   [
+    100.5654231,
+    13.7326862
+   ],
+   [
+    100.5651883,
+    13.7328135
+   ]
+  ],
+  "area_m2_approx": 3234
+ }
+]

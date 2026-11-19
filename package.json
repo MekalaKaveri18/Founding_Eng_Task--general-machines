@@ -1,0 +1,26 @@
+{
+  "name": "bangkok-brown-zone-massing",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "What can I build on this Bangkok plot? Brown-zone (ย.8-ย.10) rules, allowable envelope and concept designs in 3D.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "clipper2-js": "1.2.4",
+    "maplibre-gl": "5.24.0",
+    "terra-draw": "1.38.0",
+    "terra-draw-maplibre-gl-adapter": "1.5.0"
+  },
+  "devDependencies": {
+    "@types/geojson": "7946.0.16",
+    "typescript": "5.9.3",
+    "vite": "7.3.7",
+    "vitest": "4.1.12"
+  }
+}

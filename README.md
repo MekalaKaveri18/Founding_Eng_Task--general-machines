@@ -62,8 +62,8 @@ These are the calls where the law or the data was unclear. They are stated in th
 
 - **Plan in force:** B.E. 2556 is treated as the operative law. It was issued with a 5-year term and has been extended; a 4th revision is in draft (expected 2027).
 - **Zone is an input.** No machine-readable B.E. 2556 zoning map was reachable (the BMA and Lands Department GIS servers did not respond, and no open copy exists). The demo plots' zone (ย.10) comes from property-agent listings for Sois 18, 22, 31 and 65/1, which match the Gazette's FAR and OSR for ย.10. It is not an official land-use certificate; check with a BMA land-use certificate.
-- **Road width is an input.** Only 9 of 2,424 OpenStreetMap roads in the area have a width tag, so the default comes from road class and you override it. Road continuity (MR 33 art. 2) is assumed.
-- **Building heights:** 26 % of OpenStreetMap buildings have a height or level count (most towers do). The rest use a fallback height (shown in a lighter grey).
+- **Road width is an input.** Only 29 of the 5,655 OpenStreetMap roads in the baked data have a width tag, so the default comes from road class and you override it. Road continuity (MR 33 art. 2) is assumed.
+- **Building heights:** only 14 % of the 17,373 baked OpenStreetMap buildings (2,448) have a height or level count. The rest use a fallback of 3 to 12.8 m by building type (shown in a lighter grey), so some real tall buildings around a plot are drawn too low.
 - **Floor height 3.2 m**; the envelope steps in whole floors, so the sloping 2:1 plane becomes steps.
 - **Parking floors count toward floor area**, at about 30 m² gross per car space. Whether basement parking counts in BMA practice was not verified.
 - **Net area** is 78 % of usable gross area; average net unit 45 m² (condo), 32 m² (rental, hotel room). Units of 60 m² or more are 40 % of condo units. These are design assumptions, not legal figures.

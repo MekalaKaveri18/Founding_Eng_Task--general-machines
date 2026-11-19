@@ -78,3 +78,9 @@ export function roadSetbackFromBoundary(row: number): number {
 
 export const BONUS_ENERGY: Record<0 | 1 | 2 | 3 | 4, number> = { 0: 0, 1: 0.05, 2: 0.1, 3: 0.15, 4: 0.2 }; // Plan art. 56
 export const BONUS_WATER_PER_UNIT = 0.05; // Plan art. 55: 1 m3 per 50 m2 of land = 5 %
+
+// Design assumptions (not legal figures). Shown in the UI and the write-up.
+export const NET_EFFICIENCY = 0.78; // net saleable area as a share of residential gross area
+export const AVG_UNIT: Record<BuildingUse, number> = { condo: 45, rental: 32, hotel: 32, office: 0 }; // net m2 per unit / room
+export const SHARE_UNITS_60: Record<BuildingUse, number> = { condo: 0.4, rental: 0, hotel: 0, office: 0 }; // share of units of 60 m2 or more
+export const HOTEL_ROOMS_RESTRICTED = 50; // Plan art. 15(8): more than 50 rooms is prohibited unless the plot qualifies

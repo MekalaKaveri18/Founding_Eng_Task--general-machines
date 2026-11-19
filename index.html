@@ -20,7 +20,13 @@
           </div>
         </div>
         <nav class="presets" id="presets" aria-label="Preset plots"></nav>
+        <button class="btn print-btn" id="print-btn" type="button" title="Print or save a one-page summary">Print summary</button>
       </header>
+      <div class="print-head" aria-hidden="true">
+        <div><b>Plot Envelope</b> · Bangkok brown zone (ย.8–ย.10), B.E. 2556</div>
+        <div id="print-meta"></div>
+        <img id="print-map" alt="Map view of the plot and the selected 3D scheme">
+      </div>
       <aside class="panel" id="panel">
         <div id="banner"></div>
         <section class="card">
@@ -51,7 +57,7 @@
       </aside>
       <main class="mapwrap">
         <div id="map"></div>
-        <div class="legend" id="legend"></div>
+        <details class="legend" id="legend-box" open><summary>Legend</summary><div id="legend"></div></details>
       </main>
     </div>
     <script type="module" src="/src/main.ts"></script>

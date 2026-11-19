@@ -129,3 +129,45 @@ describe("presets: at least two designs fit on every preset", () => {
     });
   }
 });
+
+describe("use limits shape the designs (Plan art. 15(8), 15(12))", () => {
+  const p = PRESETS.find((x) => x.id === "soi22")!;
+  const f = makeFrame(p.coords[0]);
+  const mk = (use: "office" | "hotel" | "condo", roadRow = 12): PlotInput => ({
+    ring: p.coords.map(f.toXY), roads: [{ edge: 0, row: roadRow }], zone: p.zone, use,
+    bonus: { energyLevel: 0, waterUnits: 0, affordableArea: 0 }, disabled: [],
+  });
+  it("an office on a 12 m road is capped at 2,000 m2 of office floor area and every design still passes", () => {
+    const input = mk("office");
+    const a = analyze(input);
+    expect(a.usableCap).toBe(2000);
+    const out = designSchemes(input, a).filter((s) => s.feasible);
+    expect(out.length).toBeGreaterThanOrEqual(2);
+    for (const s of out) {
+      expect(s.usableGfa).toBeLessThanOrEqual(2000 + 1e-6);
+      expect(s.usableGfa).toBeGreaterThan(1500); // it uses most of what is allowed
+      expect(s.passes, `${s.kind}: ${s.checks.filter((c) => c.pass === false).map((c) => c.id)}`).toBe(true);
+    }
+  });
+  it("a 16 m road lifts the office limit to 5,000 m2", () => {
+    expect(analyze(mk("office", 16)).usableCap).toBe(5000);
+  });
+  it("a rail station within 500 m lifts the office limit to 10,000 m2", () => {
+    expect(analyze(mk("office"), 300).usableCap).toBe(10000);
+  });
+  it("a hotel on a 12 m road is held to 50 rooms (floor area 50 x 32 / 0.78)", () => {
+    const input = mk("hotel");
+    const a = analyze(input);
+    expect(a.usableCap).toBeCloseTo((50 * 32) / 0.78, 6);
+    for (const s of designSchemes(input, a).filter((x) => x.feasible)) {
+      expect(s.units).toBeLessThanOrEqual(50);
+      expect(s.passes, `${s.kind}`).toBe(true);
+    }
+  });
+  it("a hotel on a 16 m road is not limited", () => {
+    expect(analyze(mk("hotel", 16)).usableCap).toBe(Infinity);
+  });
+  it("condos are never limited by use", () => {
+    expect(analyze(mk("condo")).usableCap).toBe(Infinity);
+  });
+});

@@ -93,6 +93,7 @@ export function renderResult(vm: ViewModel): string {
       ${stat("Largest floor plate", `${n0(plate1)} m²`, `${((plate1 / site) * 100).toFixed(0)} % of the plot`)}
       ${stat("Geometric maximum", `${n0(env.geometricGfa)} m²`, capNote || "inside the FAR cap")}
     </div>
+    ${Number.isFinite(analysis.usableCap) ? `<p class="note warn">Use limit: a ${s.use} on this plot may have at most ${n0(analysis.usableCap)} m² of usable floor area (see the Use rule below), far less than the envelope would hold. The concept designs stop there.</p>` : ""}
     ${coverageOk ? "" : `<p class="note warn">The full ground plate (${n0(plate1)} m²) covers more than the ${n0(os.maxCoverage)} m² that leaves the required open space (${n0(os.required)} m², ${os.binding === "osr" ? "zone OSR" : "30 % land share"}). The concept designs trim it.</p>`}
     <p class="legend-line"><span class="sw" style="background:${MODE_COLORS[s.view]}"></span>within FAR <span class="sw beyond"></span>above the FAR line</p>`;
 }

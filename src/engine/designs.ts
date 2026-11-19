@@ -9,8 +9,8 @@
  */
 import type { XY } from "../geo/local";
 import {
-  BETWEEN_BUILDINGS, FLOOR_H, FRONT_SPACE_PERIMETER_SHARE, FRONT_SPACE_W, MIN_PLATE_M2, PARKING_AREA_PER_BAY, PERMEABLE_SHARE,
-  type BuildingUse,
+  AVG_UNIT, BETWEEN_BUILDINGS, FLOOR_H, FRONT_SPACE_PERIMETER_SHARE, FRONT_SPACE_W, MIN_PLATE_M2, NET_EFFICIENCY, PARKING_AREA_PER_BAY,
+  PERMEABLE_SHARE, SHARE_UNITS_60, type BuildingUse,
 } from "./constants";
 import { prepare, type Envelope, type PlotInput } from "./envelope";
 import {
@@ -77,10 +77,6 @@ export interface Scheme {
   passes: boolean;
 }
 
-// Design assumptions (not legal figures). Shown in the UI and the write-up.
-export const NET_EFFICIENCY = 0.78; // net saleable area as a share of residential gross area
-export const AVG_UNIT: Record<BuildingUse, number> = { condo: 45, rental: 32, hotel: 32, office: 0 }; // net m2 per unit / room
-export const SHARE_UNITS_60: Record<BuildingUse, number> = { condo: 0.4, rental: 0, hotel: 0, office: 0 }; // share of units of 60 m2 or more
 const MAX_PODIUM = 8;
 const TOWER_TARGET_M2 = 1100;
 const SLAB_DEPTH = 22;
@@ -168,7 +164,7 @@ interface Stack {
   usableGfa: number;
 }
 
-function buildStack(f: Frame, env: Envelope, lay: Layout, P: number, cap: number, use: BuildingUse): Stack {
+function buildStack(f: Frame, env: Envelope, lay: Layout, P: number, cap: number, use: BuildingUse, usableCap: number): Stack {
   const floors: SchemeFloor[] = [];
   let cum = 0;
   let parkingArea = 0;
@@ -189,9 +185,11 @@ function buildStack(f: Frame, env: Envelope, lay: Layout, P: number, cap: number
     let parts = make(specs);
     let area = parts.reduce((a, p) => a + p.area, 0);
     if (!parts.length) break;
-    if (cum + area > cap + 1e-6) {
+    // Room left: the total floor area cap, and (above the parking podium) the use limit on usable floor area.
+    const room = Math.min(cap - cum, podium ? Infinity : usableCap - (cum - parkingArea));
+    if (area > room + 1e-6) {
       // Partial top floor: shrink each rectangle's depth from the rear until the total fits the remaining allowance.
-      const remaining = cap - cum;
+      const remaining = room;
       if (remaining < MIN_PLATE_M2) break;
       let lo = 0;
       let hi = 1;
@@ -319,7 +317,7 @@ function makeScheme(input: PlotInput, a: Analysis, p: ReturnType<typeof prepare>
   const cap = env.gfaCap === Infinity ? env.geometricGfa : env.gfaCap;
   let best: { P: number; st: Stack; req: number; prov: number; units: number } | null = null;
   for (let P = 1; P <= MAX_PODIUM; P++) {
-    const st = buildStack(f, env, lay, P, cap, input.use);
+    const st = buildStack(f, env, lay, P, cap, input.use, a.usableCap);
     if (!st.floors.length || st.floors.length < P) break;
     const net = st.usableGfa * NET_EFFICIENCY;
     const units = AVG_UNIT[input.use] > 0 ? Math.floor(net / AVG_UNIT[input.use]) : 0;

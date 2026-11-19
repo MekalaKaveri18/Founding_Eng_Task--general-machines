@@ -13,6 +13,8 @@ import { edgesOf, isSelfIntersecting, regionArea, regionFromRing, toCCW } from "
 import { renderBanner, renderDesigns, renderFloors, renderInputs, renderResult, renderRules, renderSite, type ViewModel } from "./ui/panel";
 import { designSchemes, type Scheme } from "./engine/designs";
 
+// Designs stack up to 120 floors several times over; on very large plots that takes seconds, so they stop at 5 ha.
+const MAX_DESIGN_SITE_M2 = 50_000;
 const DATA_BBOX = { w: 100.545, e: 100.59, s: 13.712, n: 13.752 };
 
 const qaErrors: string[] = [];
@@ -97,6 +99,12 @@ let schemes: Scheme[] | null = null;
 function scheduleDesigns(vm: ViewModel, input: PlotInput | null) {
   window.clearTimeout(designTimer);
   schemes = null;
+  if (vm.analysis && vm.analysis.siteArea > MAX_DESIGN_SITE_M2) {
+    $("schemes-body").innerHTML = `<p class="muted">Concept designs are limited to plots up to ${MAX_DESIGN_SITE_M2.toLocaleString("en")} m² (5 ha). The envelope and the rules above still apply to this plot.</p>`;
+    showScheme(map, frameOf(store.get()), null);
+    setEnvelopeVisible(true);
+    return;
+  }
   $("schemes-body").innerHTML = renderDesigns(vm, null, true);
   if (!input || !vm.analysis) return;
   designTimer = window.setTimeout(() => {
@@ -301,6 +309,43 @@ function wirePanel() {
 renderLegend();
 renderPresetButtons();
 wirePanel();
+
+// Small screens: start with the legend collapsed so it does not cover the map.
+if (window.matchMedia("(max-width: 860px)").matches) ($("legend-box") as HTMLDetailsElement).open = false;
+
+/** Print a one-page summary: capture the current 3D view as an image, expand every section, then print. */
+async function printSummary() {
+  const s = store.get();
+  $("print-meta").textContent = `${new Date().toLocaleString("en-GB")} · ${location.href}`;
+  try {
+    await new Promise<void>((resolve) => {
+      map.once("render", () => {
+        try {
+          ($("print-map") as HTMLImageElement).src = map.getCanvas().toDataURL("image/png");
+        } catch {
+          /* tainted or unavailable canvas: print without the map picture */
+        }
+        resolve();
+      });
+      map.triggerRepaint();
+    });
+  } finally {
+    void s;
+  }
+  await new Promise((r) => setTimeout(r, 150));
+  window.print();
+}
+$("print-btn").addEventListener("click", () => void printSummary());
+
+// Collapsed <details> do not print; open them for the print and put them back afterwards.
+let reopened: HTMLDetailsElement[] = [];
+window.addEventListener("beforeprint", () => {
+  reopened = [...document.querySelectorAll<HTMLDetailsElement>("details:not([open])")];
+  for (const d of reopened) d.open = true;
+});
+window.addEventListener("afterprint", () => {
+  for (const d of reopened) d.open = false;
+});
 
 map.on("load", async () => {
   ctx = await loadContext();

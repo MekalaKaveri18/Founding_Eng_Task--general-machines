@@ -1,5 +1,5 @@
 import {
-  FIRE_ROAD_W, FRONT_SPACE_PERIMETER_SHARE, FRONT_SPACE_W, HIGH_RISE_H, MAX_FAR_HIGHRISE, OPEN_SPACE_OTHER,
+  AVG_UNIT, FIRE_ROAD_W, FRONT_SPACE_PERIMETER_SHARE, FRONT_SPACE_W, HIGH_RISE_H, HOTEL_ROOMS_RESTRICTED, NET_EFFICIENCY, MAX_FAR_HIGHRISE, OPEN_SPACE_OTHER,
   OPEN_SPACE_RESIDENTIAL, PERMEABLE_SHARE, SIDE_HIGHRISE, SIDE_LOWRISE, ZONES, roadSetbackFromBoundary,
   type BuildingUse, type ZoneId,
 } from "./constants";
@@ -91,6 +91,19 @@ export function useLimits(use: BuildingUse, tier: number, stationM: number | nul
     note: `Office floor area limited to ${cap.toLocaleString("en")} m² on this plot (roads: ${tier ? "ROW tier " + tier + " m" : "none qualifying"}${near ? ", rail station within 500 m" : ""}).`,
     source: "Plan art. 15(12) / 16(12) / 17(12)",
   };
+}
+
+/**
+ * Largest usable (non-parking) floor area the use rules allow on this plot; Infinity when there is no use-specific limit.
+ * Offices over 1,000 m2 and hotels over 50 rooms are prohibited unless the plot is on a wide enough road or near a station.
+ */
+export function usableGfaCap(use: BuildingUse, tier: number, stationM: number | null): number {
+  if (use === "office") return useLimits(use, tier, stationM).maxGfa;
+  if (use === "hotel") {
+    const exempt = tier >= 16 || (stationM !== null && stationM <= 500);
+    return exempt ? Infinity : (HOTEL_ROOMS_RESTRICTED * AVG_UNIT.hotel) / NET_EFFICIENCY;
+  }
+  return Infinity;
 }
 
 export type RuleStatus = "applies" | "binding" | "blocked" | "info";
@@ -228,6 +241,8 @@ export interface Analysis {
   siteArea: number;
   far: ReturnType<typeof farFor>;
   openSpace: OpenSpace;
+  /** Use-specific limit on usable floor area (m2); Infinity if none. */
+  usableCap: number;
 }
 
 export function analyze(input: PlotInput, stationM: number | null = null): Analysis {
@@ -238,5 +253,6 @@ export function analyze(input: PlotInput, stationM: number | null = null): Analy
   return {
     low, high, rows: buildRules(input, low, high, stationM), siteArea: p.siteArea, far,
     openSpace: openSpaceRequired(input.zone, input.use, p.siteArea, far.effectiveFar * p.siteArea),
+    usableCap: usableGfaCap(input.use, roadTier(p.edges, p.roads), stationM),
   };
 }

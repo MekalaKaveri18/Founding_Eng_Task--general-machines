@@ -93,13 +93,6 @@ html, body { margin: 0; height: 100%; background: var(--bg); }
 }
 .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; }
 
-@media (max-width: 860px) {
-  #app { grid-template-columns: 1fr; grid-template-rows: 56px 55vh auto; height: auto; }
-  .mapwrap { grid-row: 2; height: 55vh; }
-  .panel { grid-row: 3; border-right: 0; }
-  .brand-sub { display: none; }
-}
-
 /* ---------- Block 3: inputs, results, rules ---------- */
 :root { --warn-bg: #fef9c3; --err-bg: #fee2e2; --info-bg: #e0f2fe; }
 .plot-name { font-size: 13px; color: var(--ink-2); margin: -4px 0 10px; }
@@ -207,3 +200,46 @@ input[type="number"], select { font: inherit; font-size: 13px; padding: 6px 8px;
 .ck.na { background: #eceef2; color: var(--ink-3); }
 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 .ft td.l, .ft th.l { text-align: left; }
+
+/* ---------- Block 5: legend, focus, responsive, print ---------- */
+.legend { bottom: 28px; max-width: 250px; }
+.legend summary { cursor: pointer; font-weight: 600; color: var(--ink); list-style: none; }
+.legend summary::-webkit-details-marker { display: none; }
+.legend summary::after { content: " ▾"; color: var(--ink-3); }
+.legend:not([open]) summary::after { content: " ▸"; }
+.legend #legend { display: grid; gap: 4px; margin-top: 6px; }
+.print-head { display: none; }
+
+:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; border-radius: 4px; }
+button, [data-act] { touch-action: manipulation; }
+.print-btn { white-space: nowrap; }
+
+@media (max-width: 860px) {
+  #app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 58vh auto; height: auto; min-height: 100vh; }
+  .topbar { flex-wrap: wrap; height: auto; padding: 8px 12px; gap: 8px; }
+  .presets { order: 3; width: 100%; min-width: 0; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+  .preset { white-space: nowrap; flex: 0 0 auto; }
+  .brand-sub { display: none; }
+  .print-btn { margin-left: auto; }
+  .mapwrap { grid-row: 2; }
+  .panel { grid-row: 3; border-right: 0; overflow: visible; padding: 10px; }
+  .legend { max-width: 62%; font-size: 11px; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stat-v { font-size: 16px; }
+}
+
+@media print {
+  @page { size: A4; margin: 12mm; }
+  html, body { background: #fff; height: auto; }
+  #app { display: block; height: auto; }
+  .topbar, .mapwrap, .btnrow, .hint, .mini, .switch, .ctrls, .edge-row input, .btn, #presets { display: none !important; }
+  .print-head { display: block; margin-bottom: 10px; font-size: 12px; color: var(--ink-2); }
+  .print-head img { display: block; width: 100%; max-height: 90mm; object-fit: cover; border: 1px solid var(--line); border-radius: 6px; margin-top: 8px; }
+  .print-head img:not([src]) { display: none; }
+  .panel { overflow: visible; border: 0; padding: 0; display: block; }
+  .card { box-shadow: none; break-inside: avoid-page; margin-bottom: 8px; }
+  .rule, .scheme, .stat { break-inside: avoid; }
+  .tab[aria-selected="false"] { display: none; }
+  .edge:not(.on) { display: none; }
+  a { color: inherit; }
+}

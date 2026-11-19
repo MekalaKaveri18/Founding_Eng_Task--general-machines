@@ -15,6 +15,13 @@ import { designSchemes, type Scheme } from "./engine/designs";
 
 const DATA_BBOX = { w: 100.545, e: 100.59, s: 13.712, n: 13.752 };
 
+const qaErrors: string[] = [];
+const qaCount = { render: 0, designs: 0 };
+(window as unknown as { __count: typeof qaCount }).__count = qaCount;
+window.addEventListener("error", (e) => qaErrors.push(String(e.message)));
+window.addEventListener("unhandledrejection", (e) => qaErrors.push(String((e.reason && e.reason.message) || e.reason)));
+(window as unknown as { __errs: string[] }).__errs = qaErrors;
+
 const map = createMap("map");
 (window as unknown as { __map: typeof map }).__map = map; // debug handle for QA
 
@@ -101,6 +108,7 @@ function scheduleDesigns(vm: ViewModel, input: PlotInput | null) {
 }
 
 function paintDesigns() {
+  qaCount.designs++;
   const st = store.get();
   const { vm } = compute(st);
   $("schemes-body").innerHTML = renderDesigns(vm, schemes, false);
@@ -167,6 +175,7 @@ function render() {
   renderPresetButtons();
   writeHash(s);
   scheduleDesigns(vm, input);
+  qaCount.render++;
 }
 
 function selectPreset(id: string, fly = true) {
@@ -301,6 +310,15 @@ map.on("load", async () => {
   drawer = new PlotDrawer(map);
   drawer.onRing = onRing;
   (window as unknown as { __drawer: PlotDrawer }).__drawer = drawer; // debug handle for QA
+  // QA hook: apply a state patch and repaint, as a user action would. Used by the break-it scripts.
+  (window as unknown as { __qa: unknown }).__qa = {
+    set: (patch: Partial<AppState>) => {
+      autoView = true;
+      store.set(patch);
+      schedule(true);
+    },
+    state: () => store.get(),
+  };
   ready = true;
   store.subscribe(() => {});
   render();

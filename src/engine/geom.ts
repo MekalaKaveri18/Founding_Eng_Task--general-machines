@@ -40,19 +40,35 @@ export function isEmpty(r: Region, minAreaM2 = 0.01): boolean {
   return r.length === 0 || regionArea(r) < minAreaM2;
 }
 
+/**
+ * Deep copy. clipper2-js 1.2.4 MUTATES the Point64 objects of the paths it is given (and may return paths that share
+ * them with its inputs), so a region reused across operations gets silently corrupted. Every boolean below therefore
+ * works on private copies of its inputs. Outputs may share points only with those private copies, so they are safe
+ * to hold and to pass into later operations (which copy again). Guarded by tests/immutability.test.ts.
+ */
+export function cloneRegion(r: Region): Region {
+  const out = new Paths64();
+  for (const path of r) {
+    const q = new Path64();
+    for (const pt of path) q.push(new Point64(pt.x, pt.y));
+    out.push(q);
+  }
+  return out;
+}
+
 export function unionAll(parts: Region[]): Region {
   let acc = new Paths64();
-  for (const p of parts) acc = Clipper.Union(acc, p, FillRule.NonZero);
+  for (const p of parts) acc = Clipper.Union(cloneRegion(acc), cloneRegion(p), FillRule.NonZero);
   return acc;
 }
 
 export function difference(a: Region, b: Region): Region {
-  if (b.length === 0) return a;
-  return Clipper.Difference(a, b, FillRule.NonZero);
+  if (b.length === 0) return cloneRegion(a);
+  return Clipper.Difference(cloneRegion(a), cloneRegion(b), FillRule.NonZero);
 }
 
 export function intersect(a: Region, b: Region): Region {
-  return Clipper.Intersect(a, b, FillRule.NonZero);
+  return Clipper.Intersect(cloneRegion(a), cloneRegion(b), FillRule.NonZero);
 }
 
 /** Ensure counter-clockwise order (y up). */

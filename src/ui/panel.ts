@@ -31,7 +31,7 @@ export function renderSite(vm: ViewModel): string {
           <span class="edge-id">${letter(i)}</span><span>${n1(len)} m</span>
           <span class="edge-tag">${f ? "faces a road" : "boundary"}</span></label>
         ${f ? `<div class="edge-row"><span class="edge-name">${esc(f.name)}</span>
-          <label class="inline">ROW <input type="number" min="3" max="120" step="0.5" value="${f.row}" data-act="row" data-edge="${i}" aria-label="Right-of-way of edge ${letter(i)} in metres"> m</label></div>` : ""}
+          <span class="print-only">ROW ${f.row} m</span><label class="inline">ROW <input type="number" min="3" max="120" step="0.5" value="${f.row}" data-act="row" data-edge="${i}" aria-label="Right-of-way of edge ${letter(i)} in metres"> m</label></div>` : ""}
       </div>`;
     })
     .join("");

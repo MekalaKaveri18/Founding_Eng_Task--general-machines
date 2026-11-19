@@ -116,6 +116,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); }
 .inline { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
 input[type="number"], select { font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--ink); }
 .edge-row input[type="number"] { width: 64px; }
+.print-only { display: none; }
 .field { display: grid; gap: 4px; margin-bottom: 10px; font-size: 12px; color: var(--ink-2); }
 .field select, .field input { width: 100%; }
 .bonus summary, .card-sum { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 2px 0 8px; }
@@ -232,7 +233,8 @@ button, [data-act] { touch-action: manipulation; }
   @page { size: A4; margin: 12mm; }
   html, body { background: #fff; height: auto; }
   #app { display: block; height: auto; }
-  .topbar, .mapwrap, .btnrow, .hint, .mini, .switch, .ctrls, .edge-row input, .btn, #presets { display: none !important; }
+  .topbar, .mapwrap, .btnrow, .hint, .mini, .switch, .ctrls, .edge-row .inline, .btn, #presets { display: none !important; }
+  .print-only { display: inline !important; font-weight: 600; color: var(--ink); }
   .print-head { display: block; margin-bottom: 10px; font-size: 12px; color: var(--ink-2); }
   .print-head img { display: block; width: 100%; max-height: 90mm; object-fit: cover; border: 1px solid var(--line); border-radius: 6px; margin-top: 8px; }
   .print-head img:not([src]) { display: none; }

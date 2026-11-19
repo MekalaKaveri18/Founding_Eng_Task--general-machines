@@ -306,7 +306,7 @@ export function designSchemes(input: PlotInput, a: Analysis, stationM: number | 
     ? [
         { kind: "tower", mode: "high", name: "Tower on podium", blurb: "One slender tower above a parking podium; the most open ground." },
         { kind: "slab", mode: "high", name: "Slab on podium", blurb: "A long double-loaded bar parallel to the road above a parking podium." },
-        { kind: "twin", mode: "high", name: "Twin towers", blurb: "Two towers on a shared podium; lower and wider than a single tower." },
+        { kind: "twin", mode: "high", name: "Twin towers", blurb: "Two slender towers on a shared podium, separated by the 6 m minimum gap (MR 55 art. 48)." },
         { kind: "block", mode: "low", name: "Low-rise block", blurb: "Under 23 m, so the lighter low-rise rules apply; no high-rise gate." },
       ]
     : [

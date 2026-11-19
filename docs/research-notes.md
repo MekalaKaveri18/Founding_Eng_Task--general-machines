@@ -71,7 +71,7 @@ FAR bonus (arts. 51 to 57). Total bonus from all measures is capped at **20 perc
 
 Worked check: ย.10, plot of 800 m2: base FAR 8 -> 6,400 m2. With a 20 % bonus: 9.6 -> 7,680 m2. MR 33 art. 5 caps a high-rise at 10:1, so 9.6 is allowed. OSR 4 % of 7,680 = 307 m2, but MR 33 art. 6 needs 30 % of the SITE (240 m2 on 800 m2): compare the two, the larger binds. (OSR is per total floor area, MR 33 is per site area.)
 
-Cross-check: a secondary site (Thai blog summary) gave ย.7 FAR 5 / OSR 6, ย.8 FAR 6 / OSR 5, ย.9 FAR 7 / OSR 4.5. Matches the Gazette. A user-supplied guess earlier (ย.7 = 4, ย.8 = 5, ย.9 = 6, ย.10 = 7) was off by one zone. Do not use it.
+Cross-check: a secondary site (Thai blog summary) gave ย.7 FAR 5 / OSR 6, ย.8 FAR 6 / OSR 5, ย.9 FAR 7 / OSR 4.5. Matches the Gazette. The FAR values typed into my own first search query (ย.7 = 4, ย.8 = 5, ย.9 = 6, ย.10 = 7) were a guess from memory and were off by one zone. Do not use them.
 
 ### CORRECTION: which codes are "Brown"
 Plan art. 7(3) (Gazette text, line ~162 of plan56.txt): **ย.8 to ย.10 = brown (สีน้ำตาล) = high-density residential.** ย.5 to ย.7 are medium density (orange). ศ.1 / ศ.2 = light brown (conservation). Earlier I wrote "ย.7 to ย.10"; that was wrong. Brown = ย.8, ย.9, ย.10.

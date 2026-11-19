@@ -79,8 +79,9 @@ def main():
     # 2. Narrow 6 m soi: small lot on the north side of Soi Sai Nam Thip 1 (runs west from Soi 22).
     snt = line_of(roads, 156261363)  # east -> west
     row6 = 6.0
-    p, u, v = frame_on_road(snt, origin, 45, side=-1)  # right of a westbound line = north
-    poly = place(p, u, v, row6 / 2, [(0, 0), (24, 0), (24, 31), (0, 34)])
+    p, u, v = frame_on_road(snt, origin, 24, side=-1)  # right of a westbound line = north
+    # 30 m of frontage, ~28 m deep. Position and size chosen so no neighbouring building is cut by the boundary.
+    poly = place(p, u, v, row6 / 2, [(0, 0), (30, 0), (30, 25), (0, 28)])
     presets.append({"id": "narrow", "name": "Narrow 6 m soi lot", "zone": "Y10",
                     "note": "Soi Sai Nam Thip 1, off Soi 22. Shows how a narrow soi limits height and blocks high-rise.",
                     "roads": [{"edge": 0, "row": row6, "name": "Soi Sai Nam Thip 1"}],

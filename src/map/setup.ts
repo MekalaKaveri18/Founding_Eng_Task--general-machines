@@ -1,5 +1,6 @@
 import maplibregl, { type Map as MLMap, type GeoJSONSource } from "maplibre-gl";
-import { circleLngLat, makeFrame, pointInRing, type LngLat } from "../geo/local";
+import { circleLngLat, makeFrame, type LngLat } from "../geo/local";
+import { intersect, regionArea, regionFromRing } from "../engine/geom";
 
 const STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 const DATA = `${import.meta.env.BASE_URL}data`;
@@ -178,20 +179,21 @@ export function showPlot(
     })),
   });
 
+  // A building counts as "on the plot" (to be demolished) when most of its footprint lies inside the plot.
+  // The centre point alone is not enough: a building mostly inside but with its centre outside would be missed.
   const frame = makeFrame(coords[0]);
   const plotXY = coords.map(frame.toXY);
+  const plotRegion = regionFromRing(plotXY);
+  const xs = plotXY.map((q) => q[0]);
+  const ys = plotXY.map((q) => q[1]);
+  const [x0, x1, y0, y1] = [Math.min(...xs) - 1, Math.max(...xs) + 1, Math.min(...ys) - 1, Math.max(...ys) + 1];
   onPlotIds = [];
   for (const b of ctx.buildings.features) {
-    const r = b.geometry.coordinates[0];
-    let cx = 0;
-    let cy = 0;
-    for (const p of r) {
-      cx += p[0];
-      cy += p[1];
-    }
-    const c = frame.toXY([cx / r.length, cy / r.length]);
-    if (Math.abs(c[0]) > 2000 || Math.abs(c[1]) > 2000) continue;
-    if (pointInRing(c, plotXY)) onPlotIds.push(b.properties.id);
+    const ring = b.geometry.coordinates[0].map((c) => frame.toXY(c as LngLat));
+    if (ring.every((q) => q[0] < x0) || ring.every((q) => q[0] > x1) || ring.every((q) => q[1] < y0) || ring.every((q) => q[1] > y1)) continue;
+    const bRegion = regionFromRing(ring);
+    const total = regionArea(bRegion);
+    if (total > 0 && regionArea(intersect(bRegion, plotRegion)) / total >= 0.5) onPlotIds.push(b.properties.id);
   }
   const lit = ["literal", onPlotIds] as unknown as maplibregl.ExpressionSpecification;
   map.setFilter("context-3d", ["!", ["in", ["get", "id"], lit]]);

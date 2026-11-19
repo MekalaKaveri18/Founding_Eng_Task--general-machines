@@ -176,3 +176,34 @@ input[type="number"], select { font: inherit; font-size: 13px; padding: 6px 8px;
 .ft tr.beyond td { color: var(--ink-3); background: #f6f7fb; }
 .ft tfoot td { border-top: 1px solid var(--line); padding-top: 6px; }
 .ft tfoot td:first-child { text-align: left; }
+
+/* ---------- Block 4: concept designs ---------- */
+.schemes { display: grid; gap: 8px; margin-top: 8px; }
+.scheme { border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; }
+.scheme.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.scheme.failing { border-color: #f1b8b8; }
+.scheme.na { padding: 10px 12px; background: #fafafa; }
+.sc-btn { all: unset; display: block; width: 100%; box-sizing: border-box; padding: 10px 12px; cursor: pointer; }
+.sc-btn:hover { background: #fafbfc; }
+.sc-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; }
+.sc-blurb, .sc-why { font-size: 12px; color: var(--ink-2); margin: 3px 0 7px; line-height: 1.4; }
+.sc-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.badge { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 7px; border-radius: 999px; font-weight: 700; white-space: nowrap; }
+.badge.ok { background: #dcfce7; color: #166534; }
+.badge.bad { background: var(--err-bg); color: #991b1b; }
+.badge.na { background: #eceef2; color: var(--ink-3); }
+.sd { border-top: 1px solid var(--line); padding: 10px 12px 12px; background: #fcfcfd; }
+.sd-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-3); font-weight: 700; margin: 4px 0 6px; }
+.ck-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+.ck-table td { padding: 6px 4px; border-bottom: 1px solid #f0f2f5; vertical-align: top; font-size: 12px; }
+.ck-table td:first-child { width: 22px; }
+.ck-table tr.fail td { background: #fff5f5; }
+.ck-label { font-weight: 600; font-size: 12.5px; }
+.ck-vals { margin-top: 1px; font-variant-numeric: tabular-nums; }
+.ck-note, .ck-src { font-size: 11px; color: var(--ink-3); margin-top: 2px; line-height: 1.35; }
+.ck { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; font-weight: 700; }
+.ck.ok { background: #dcfce7; color: #166534; }
+.ck.bad { background: #fee2e2; color: #991b1b; }
+.ck.na { background: #eceef2; color: var(--ink-3); }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.ft td.l, .ft th.l { text-align: left; }

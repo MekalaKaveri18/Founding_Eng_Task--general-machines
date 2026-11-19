@@ -186,6 +186,36 @@ function inRing(p: XY, ring: XY[]): boolean {
   return inside;
 }
 
+
+/** Total boundary length of a region (outer rings and holes), metres. */
+export function perimeter(r: Region): number {
+  let total = 0;
+  for (const path of r) {
+    for (let i = 0; i < path.length; i++) {
+      const a = path[i];
+      const b = path[(i + 1) % path.length];
+      total += Math.hypot(b.x - a.x, b.y - a.y) / S;
+    }
+  }
+  return total;
+}
+
+/** Point containment for a region with holes. */
+export function regionContains(r: Region, p: XY): boolean {
+  for (const poly of regionToPolygons(r)) {
+    if (!inRing(p, poly[0])) continue;
+    if (poly.slice(1).some((h) => inRing(p, h))) continue;
+    return true;
+  }
+  return false;
+}
+
+/** Oriented rectangle in a local frame (origin o, axes u and v), as a region. */
+export function orientedRect(o: XY, u: XY, v: XY, x0: number, x1: number, y0: number, y1: number): Region {
+  const at = (x: number, y: number): XY => [o[0] + u[0] * x + v[0] * y, o[1] + u[1] * x + v[1] * y];
+  return regionFromRing(toCCW([at(x0, y0), at(x1, y0), at(x1, y1), at(x0, y1)]));
+}
+
 /** Self-intersection check for a simple polygon (used to reject bad user input). */
 export function isSelfIntersecting(ring: XY[]): boolean {
   const n = ring.length;

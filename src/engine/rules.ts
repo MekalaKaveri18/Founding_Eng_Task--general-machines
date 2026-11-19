@@ -180,11 +180,13 @@ export function buildRules(input: PlotInput, low: Envelope, high: Envelope, stat
     source: "MR 33 art. 6, Ord 44 art. 52, Plan arts. 15-17", status: "binding", effect: "design",
   });
 
-  const gate = highRiseGate(p.edges, p.roads, high.gfaCap);
+  const gate = highRiseGate(p.edges, p.roads);
   rows.push({
     id: "access", group: "Access", label: "High-rise access: frontage and road",
     value: gate.ok ? "satisfied" : "not satisfied",
-    detail: gate.ok ? "A plot side of 12 m or more on a public road of at least 10 m right-of-way (18 m if over 30,000 m²). Road continuity is assumed; check on site." : gate.reason!,
+    detail: gate.ok
+      ? `A plot side of 12 m or more on a public road of at least 10 m right-of-way.${Number.isFinite(gate.maxGfa) ? " This road is under 18 m wide, so the building is limited to 30,000 m²." : ""} Road continuity is assumed; check on site.`
+      : gate.reason!,
     source: "MR 33 art. 2", status: gate.ok ? "applies" : "blocked", effect: "gate",
   });
   rows.push({

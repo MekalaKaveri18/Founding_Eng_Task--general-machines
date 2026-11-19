@@ -1,7 +1,7 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./style.css";
 import { addLayers, COLORS, createMap, loadContext, showPlot, type ContextData } from "./map/setup";
-import { addEnvelopeLayers, highlightEdge, MODE_COLORS, showEnvelope, showGhost } from "./map/envelopeLayers";
+import { addEnvelopeLayers, highlightEdge, MODE_COLORS, showEnvelope, showGhost, showScheme } from "./map/envelopeLayers";
 import { PlotDrawer } from "./map/draw";
 import { guessFrontage, loadRoads, nearestStationM } from "./map/roads";
 import { PRESETS } from "./presets";
@@ -10,7 +10,8 @@ import { Store, readHash, stateFromPreset, writeHash, type AppState } from "./st
 import { analyze } from "./engine/rules";
 import { ghostFor, type PlotInput, type RuleId } from "./engine/envelope";
 import { edgesOf, isSelfIntersecting, regionArea, regionFromRing, toCCW } from "./engine/geom";
-import { renderBanner, renderFloors, renderInputs, renderResult, renderRules, renderSite, type ViewModel } from "./ui/panel";
+import { renderBanner, renderDesigns, renderFloors, renderInputs, renderResult, renderRules, renderSite, type ViewModel } from "./ui/panel";
+import { designSchemes, type Scheme } from "./engine/designs";
 
 const DATA_BBOX = { w: 100.545, e: 100.59, s: 13.712, n: 13.752 };
 
@@ -83,6 +84,39 @@ function compute(s: AppState): { vm: ViewModel; input: PlotInput | null } {
   return { vm: { s, analysis, edgeLengths, banner, stationM }, input };
 }
 
+// Concept designs take up to ~150 ms on a big plot, so they are computed after the cheap results, debounced while dragging.
+let designTimer = 0;
+let schemes: Scheme[] | null = null;
+function scheduleDesigns(vm: ViewModel, input: PlotInput | null) {
+  window.clearTimeout(designTimer);
+  schemes = null;
+  $("schemes-body").innerHTML = renderDesigns(vm, null, true);
+  if (!input || !vm.analysis) return;
+  designTimer = window.setTimeout(() => {
+    const st = store.get();
+    schemes = designSchemes(input, vm.analysis!, vm.stationM);
+    if (st.design && !schemes.some((d) => d.kind === st.design && d.feasible)) store.set({ design: null });
+    paintDesigns();
+  }, 140);
+}
+
+function paintDesigns() {
+  const st = store.get();
+  const { vm } = compute(st);
+  $("schemes-body").innerHTML = renderDesigns(vm, schemes, false);
+  const chosen = schemes?.find((d) => d.kind === st.design) ?? null;
+  showScheme(map, frameOf(st), chosen);
+  setEnvelopeVisible(!chosen);
+}
+
+/** The envelope volume and ghosts are hidden while a design is shown, so no two extrusions share a face. */
+function setEnvelopeVisible(visible: boolean) {
+  for (const id of ["env-solid", "env-beyond", "ghost-3d"]) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+}
+
+// When a plot is first loaded or drawn, open on the low-rise tab if high-rise is not possible there.
+let autoView = true;
+
 let raf = 0;
 let inputsDirty = true;
 function schedule(inputs = true) {
@@ -98,6 +132,14 @@ function render() {
   if (!ready || !ctx) return;
   const s = store.get();
   const { vm, input } = compute(s);
+  if (autoView && vm.analysis) {
+    autoView = false;
+    if (!vm.analysis.high.allowed && s.view === "high") {
+      store.set({ view: "low" });
+      schedule(false);
+      return;
+    }
+  }
 
   // Map: plot outline, frontage edges, existing buildings
   if (s.ring.length >= 3) {
@@ -124,12 +166,14 @@ function render() {
   $("floors-body").innerHTML = renderFloors(vm);
   renderPresetButtons();
   writeHash(s);
+  scheduleDesigns(vm, input);
 }
 
 function selectPreset(id: string, fly = true) {
   drawer?.stop();
   const next = stateFromPreset(id);
-  store.set({ ...next, view: store.get().view });
+  autoView = true;
+  store.set({ ...next, view: "high" });
   inputsDirty = true;
   schedule();
   if (fly) flyToPlot();
@@ -153,7 +197,10 @@ function onRing(ring: LngLat[], finished: boolean) {
   const countChanged = ring.length !== s.ring.length;
   const patch: Partial<AppState> = { ring, presetId: null };
   if (finished || countChanged) patch.frontage = autoFrontage(ring);
-  if (finished) patch.mode = "edit";
+  if (finished) {
+    patch.mode = "edit";
+    autoView = true;
+  }
   store.set(patch);
   try {
     if (finished) drawer?.startEditing(ring);
@@ -184,6 +231,15 @@ function wirePanel() {
     } else if (act === "view") {
       store.set({ view: t.dataset.view as "low" | "high" });
       schedule(false);
+    } else if (act === "design") {
+      const kind = t.dataset.kind as AppState["design"];
+      store.set({ design: s.design === kind ? null : kind });
+      paintDesigns();
+      writeHash(store.get());
+    } else if (act === "design-clear") {
+      store.set({ design: null });
+      paintDesigns();
+      writeHash(store.get());
     } else if (act === "ghost") {
       const r = t.dataset.rule as RuleId;
       store.set({ ghost: s.ghost === r ? null : r });

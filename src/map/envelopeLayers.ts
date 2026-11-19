@@ -2,6 +2,7 @@ import type { Map as MLMap, GeoJSONSource } from "maplibre-gl";
 import type { Frame, XY } from "../geo/local";
 import type { Envelope, RuleId } from "../engine/envelope";
 import { regionToPolygons } from "../engine/geom";
+import type { PartUse, Scheme } from "../engine/designs";
 
 export const RULE_COLORS: Record<RuleId, string> = {
   "road-setback": "#2563eb",
@@ -17,13 +18,15 @@ export const RULE_LABELS: Record<RuleId, string> = {
 };
 export const MODE_COLORS = { low: "#14917f", high: "#4458e0" };
 const BEYOND_COLOR = "#9aa5d6";
+export const USE_COLORS: Record<PartUse, string> = { parking: "#8f8579", residential: "#e2a15f", office: "#6fa8d6", hotel: "#b48ad8" };
+export const USE_LABELS: Record<PartUse, string> = { parking: "Parking", residential: "Residential", office: "Office", hotel: "Hotel rooms" };
 
 const EPS = 0.01; // m. Lifts each block's base a hair above the one below so stacked faces are never coplanar.
 
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
 export function addEnvelopeLayers(map: MLMap) {
-  for (const id of ["env", "ghost", "foot", "edge-hl"]) map.addSource(id, { type: "geojson", data: EMPTY });
+  for (const id of ["env", "ghost", "foot", "edge-hl", "scheme"]) map.addSource(id, { type: "geojson", data: EMPTY });
 
   map.addLayer({
     id: "foot-fill", type: "fill", source: "foot",
@@ -52,6 +55,13 @@ export function addEnvelopeLayers(map: MLMap) {
     paint: {
       "fill-extrusion-color": ["get", "color"], "fill-extrusion-height": ["get", "top"], "fill-extrusion-base": ["get", "base"],
       "fill-extrusion-opacity": 0.5,
+    },
+  });
+  map.addLayer({
+    id: "scheme-3d", type: "fill-extrusion", source: "scheme",
+    paint: {
+      "fill-extrusion-color": ["get", "color"], "fill-extrusion-height": ["get", "top"], "fill-extrusion-base": ["get", "base"],
+      "fill-extrusion-opacity": 0.96, "fill-extrusion-vertical-gradient": true,
     },
   });
   map.addLayer({
@@ -143,4 +153,34 @@ export function highlightEdge(map: MLMap, a: [number, number] | null, b?: [numbe
   const src = map.getSource("edge-hl") as GeoJSONSource | undefined;
   if (!src) return;
   src.setData(a && b ? { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [a, b] } } : EMPTY);
+}
+
+/** Draw a concept design: consecutive floors with the same plate and use are merged into one block. */
+export function showScheme(map: MLMap, frame: Frame, scheme: Scheme | null) {
+  const src = map.getSource("scheme") as GeoJSONSource;
+  if (!scheme || !scheme.feasible) return src.setData(EMPTY);
+  const sig = (polys: XY[][][]) => JSON.stringify(polys.map((poly) => poly.map((r) => r.map((p) => [p[0].toFixed(2), p[1].toFixed(2)]))));
+  const open = new Map<string, { base: number; top: number; polys: XY[][][]; use: PartUse; lastFloor: number }>();
+  const done: { base: number; top: number; polys: XY[][][]; use: PartUse }[] = [];
+  for (const fl of scheme.floors) {
+    const seen = new Set<string>();
+    for (const part of fl.parts) {
+      const polys = regionToPolygons(part.region);
+      const key = `${part.use}|${sig(polys)}`;
+      seen.add(key);
+      const cur = open.get(key);
+      if (cur && cur.lastFloor === fl.floor - 1) {
+        cur.top = fl.zTop;
+        cur.lastFloor = fl.floor;
+      } else {
+        if (cur) done.push(cur);
+        open.set(key, { base: fl.zBase + (fl.floor > 1 ? EPS : 0), top: fl.zTop, polys, use: part.use, lastFloor: fl.floor });
+      }
+    }
+  }
+  done.push(...open.values());
+  src.setData({
+    type: "FeatureCollection",
+    features: done.map((g) => feature(frame, g.polys, { base: g.base, top: g.top, color: USE_COLORS[g.use] })),
+  });
 }

@@ -199,10 +199,16 @@ describe("high-rise access gate (MR 33 art. 2)", () => {
     const env = computeEnvelope(base({ roads: [{ edge: 0, row: 8 }] }), "high");
     expect(env.allowed).toBe(false);
   });
-  it("needs an 18 m road when the building would exceed 30,000 m2", () => {
+  it("a 10-18 m road allows a high-rise but caps it at 30,000 m2; an 18 m road lifts the cap", () => {
     const p = prepare(base());
-    expect(highRiseGate(p.edges, p.roads, 20_000).ok).toBe(true);
-    expect(highRiseGate(p.edges, p.roads, 40_000).ok).toBe(false);
+    expect(highRiseGate(p.edges, p.roads)).toMatchObject({ ok: true, maxGfa: 30_000 });
+    const p18 = prepare(base({ roads: [{ edge: 0, row: 18 }] }));
+    expect(highRiseGate(p18.edges, p18.roads)).toMatchObject({ ok: true, maxGfa: Infinity });
+  });
+  it("applies the 30,000 m2 cap to the envelope on a big plot with a 16 m road", () => {
+    const big: XY[] = [[0, 0], [90, 0], [90, 60], [0, 60]]; // FAR 8 x 5400 = 43,200 m2 would be allowed on an 18 m road
+    expect(computeEnvelope(base({ ring: big, roads: [{ edge: 0, row: 16 }] }), "high").gfaCap).toBe(30_000);
+    expect(computeEnvelope(base({ ring: big, roads: [{ edge: 0, row: 20 }] }), "high").gfaCap).toBeCloseTo(43_200, 6);
   });
 });
 

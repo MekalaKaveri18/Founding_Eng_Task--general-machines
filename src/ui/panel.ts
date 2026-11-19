@@ -1,7 +1,8 @@
 import { ZONES, type BuildingUse, type ZoneId } from "../engine/constants";
 import type { Envelope, RuleId } from "../engine/envelope";
 import type { Analysis, RuleRow } from "../engine/rules";
-import { groupSlices, MODE_COLORS, RULE_COLORS, RULE_LABELS } from "../map/envelopeLayers";
+import type { Scheme, SchemeFloor } from "../engine/designs";
+import { groupSlices, MODE_COLORS, RULE_COLORS, RULE_LABELS, USE_COLORS, USE_LABELS } from "../map/envelopeLayers";
 import type { AppState } from "../state";
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
@@ -162,4 +163,81 @@ export function renderBanner(vm: ViewModel): string {
 
 export function ruleName(r: RuleId) {
   return RULE_LABELS[r];
+}
+
+function floorRuns(floors: SchemeFloor[]) {
+  const key = (f: SchemeFloor) => f.parts.map((p) => `${p.use}:${p.area.toFixed(1)}`).join("|");
+  const runs: { a: number; b: number; f: SchemeFloor }[] = [];
+  for (const f of floors) {
+    const last = runs[runs.length - 1];
+    if (last && key(last.f) === key(f)) last.b = f.floor;
+    else runs.push({ a: f.floor, b: f.floor, f });
+  }
+  return runs;
+}
+
+function checkIcon(pass: boolean | null) {
+  return pass === null
+    ? `<span class="ck na" title="Not applicable">–</span>`
+    : pass
+      ? `<span class="ck ok" title="Pass">✓</span>`
+      : `<span class="ck bad" title="Fail">✗</span>`;
+}
+
+function schemeDetail(s: Scheme, site: number): string {
+  const checks = s.checks
+    .map(
+      (c) => `<tr class="${c.pass === false ? "fail" : ""}"><td>${checkIcon(c.pass)}</td>
+      <td><div class="ck-label">${esc(c.label)}</div><div class="ck-vals"><b>${esc(c.value)}</b> <span class="muted">· needs ${esc(c.limit)}</span></div>
+      ${c.note ? `<div class="ck-note">${esc(c.note)}</div>` : ""}<div class="ck-src">${esc(c.source)}</div></td></tr>`,
+    )
+    .join("");
+  const runs = floorRuns(s.floors);
+  let cum = 0;
+  const rows = runs
+    .map((r) => {
+      const count = r.b - r.a + 1;
+      const sub = count * r.f.area;
+      cum += sub;
+      const uses = r.f.parts
+        .map((p) => `<span class="dot" style="background:${USE_COLORS[p.use]}"></span>${USE_LABELS[p.use]} ${n0(p.area)}`)
+        .join(" + ");
+      return `<tr><td>${r.a === r.b ? r.a : `${r.a}–${r.b}`}</td><td class="l">${uses}</td><td>${n0(r.f.area)}</td><td>${count}</td><td>${n0(sub)}</td><td>${n0(cum)}</td></tr>`;
+    })
+    .join("");
+  return `<div class="sd">
+    <div class="sd-title">Checklist <span class="muted">${s.checks.filter((c) => c.pass === true).length} passed · ${s.checks.filter((c) => c.pass === false).length} failed</span></div>
+    <table class="ck-table"><tbody>${checks}</tbody></table>
+    <div class="sd-title">Floor by floor</div>
+    <table class="ft"><thead><tr><th>Floor</th><th class="l">Use and plate (m²)</th><th>Plate</th><th>×</th><th>Subtotal</th><th>Cumulative</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td colspan="5" class="l">Total floor area = ${(s.gfa / site).toFixed(2)} × the plot</td><td><b>${n0(s.gfa)}</b></td></tr></tfoot></table>
+    <p class="note">Assumptions: 3.2 m per floor; net area 78 % of residential gross; average net unit 45 m² (condo); parking counts toward floor area; about 30 m² per car space.</p></div>`;
+}
+
+export function renderDesigns(vm: ViewModel, schemes: Scheme[] | null, pending: boolean): string {
+  const { s, analysis } = vm;
+  if (!analysis) return `<p class="muted">Designs appear once the plot is valid and a road side is marked.</p>`;
+  if (!schemes) return `<p class="muted">${pending ? "Working out designs…" : "No designs yet."}</p>`;
+  const fits = schemes.filter((x) => x.feasible && x.passes).length;
+  const site = analysis.siteArea;
+  const cards = schemes
+    .map((d) => {
+      const sel = s.design === d.kind;
+      if (!d.feasible) {
+        return `<div class="scheme na"><div class="sc-top"><b>${esc(d.name)}</b><span class="badge na">not possible here</span></div><div class="sc-why">${esc(d.reason ?? "")}</div></div>`;
+      }
+      return `<div class="scheme ${sel ? "sel" : ""} ${d.passes ? "" : "failing"}">
+        <button class="sc-btn" data-act="design" data-kind="${d.kind}" aria-pressed="${sel}">
+          <div class="sc-top"><b>${esc(d.name)}</b><span class="badge ${d.passes ? "ok" : "bad"}">${d.passes ? "all checks pass" : "fails " + d.checks.filter((c) => c.pass === false).length}</span></div>
+          <div class="sc-blurb">${esc(d.blurb)}</div>
+          <div class="sc-stats"><span><b>${d.floors.length}</b> floors · ${n1(d.height)} m</span><span><b>${n0(d.gfa)}</b> m² (${(d.gfa / site).toFixed(2)}×)</span>
+            <span><b>${d.units}</b> ${d.unitLabel}</span><span><b>${d.parkingProvided}</b>/${d.parkingRequired} car spaces</span></div>
+        </button>${sel ? schemeDetail(d, site) : ""}</div>`;
+    })
+    .join("");
+  const back = s.design ? ` <button class="mini on" data-act="design-clear" style="--c:#4458e0">back to the envelope</button>` : "";
+  return `<p class="muted tight">${fits} of ${schemes.filter((x) => x.feasible).length} designs pass every check on this plot. Pick one to see it in 3D with its checklist.${back}</p>
+    <div class="legend-line">${(["parking", "residential"] as const).map((u) => `<span class="dot" style="background:${USE_COLORS[u]}"></span>${USE_LABELS[u]}`).join(" &nbsp; ")}</div>
+    <div class="schemes">${cards}</div>`;
 }

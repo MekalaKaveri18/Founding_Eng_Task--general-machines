@@ -1,6 +1,7 @@
 import type { LngLat } from "./geo/local";
 import type { Bonus, RuleId } from "./engine/envelope";
 import type { BuildingUse, ZoneId } from "./engine/constants";
+import type { SchemeKind } from "./engine/designs";
 import { DEFAULT_PRESET, PRESETS } from "./presets";
 
 export interface FrontageState {
@@ -21,6 +22,8 @@ export interface AppState {
   view: "low" | "high";
   /** Rule whose removed volume is drawn as a translucent ghost. */
   ghost: RuleId | null;
+  /** Concept design shown in 3D (replaces the envelope volume while selected). */
+  design: SchemeKind | null;
   mode: "idle" | "draw" | "edit";
 }
 
@@ -38,6 +41,7 @@ export function stateFromPreset(id: string): AppState {
     disabled: [],
     view: "high",
     ghost: null,
+    design: null,
     mode: "idle",
   };
 }
@@ -71,6 +75,7 @@ export function writeHash(s: AppState) {
     s.zone === preset.zone &&
     s.use === "condo" &&
     s.disabled.length === 0 &&
+    s.design === null &&
     s.bonus.energyLevel === 0 && s.bonus.waterUnits === 0 && s.bonus.affordableArea === 0 &&
     JSON.stringify(s.ring) === JSON.stringify(preset.coords) &&
     JSON.stringify(s.frontage.map((f) => [f.edge, f.row])) === JSON.stringify(preset.roads.map((r) => [r.edge, r.row]));
@@ -80,7 +85,7 @@ export function writeHash(s: AppState) {
     const payload = {
       r: s.ring.map((c) => [Math.round(c[0] * 1e6) / 1e6, Math.round(c[1] * 1e6) / 1e6]),
       f: s.frontage.map((f) => [f.edge, f.row, f.name]),
-      z: s.zone, u: s.use, b: [s.bonus.energyLevel, s.bonus.waterUnits, s.bonus.affordableArea], d: s.disabled, v: s.view, p: s.presetId,
+      z: s.zone, u: s.use, b: [s.bonus.energyLevel, s.bonus.waterUnits, s.bonus.affordableArea], d: s.disabled, v: s.view, p: s.presetId, k: s.design,
     };
     h = `#s=${btoa(unescape(encodeURIComponent(JSON.stringify(payload))))}`;
   }
@@ -105,6 +110,7 @@ export function readHash(): AppState | null {
         bonus: { energyLevel: j.b?.[0] ?? 0, waterUnits: j.b?.[1] ?? 0, affordableArea: j.b?.[2] ?? 0 },
         disabled: j.d ?? [],
         view: j.v === "low" ? "low" : "high",
+        design: j.k ?? null,
       };
     } catch {
       return null;

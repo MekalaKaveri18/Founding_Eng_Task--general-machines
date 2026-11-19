@@ -108,16 +108,23 @@ function toCCWFlag(ring: XY[]): boolean {
   return toCCW(ring) !== ring;
 }
 
-/** High-rise access gate, MR 33 art. 2. */
-export function highRiseGate(edges: EdgeInfo[], roads: Frontage[], gfa: number) {
-  const needRow = gfa > BIG_GFA ? HIGHRISE_ROAD_ROW_BIG : HIGHRISE_ROAD_ROW;
-  const ok = roads.some((r) => edges[r.edge] && edges[r.edge].length >= HIGHRISE_FRONTAGE_LEN && r.row >= needRow);
+/**
+ * High-rise access gate, MR 33 art. 2.
+ * Needs a plot side of at least 12 m on a public road of at least 10 m right-of-way. A building over 30,000 m2
+ * needs the road to be at least 18 m; on a 10-18 m road a high-rise is still allowed, capped at 30,000 m2.
+ */
+export function highRiseGate(edges: EdgeInfo[], roads: Frontage[]) {
+  const rows = roads.filter((r) => edges[r.edge] && edges[r.edge].length >= HIGHRISE_FRONTAGE_LEN).map((r) => r.row);
+  const best = rows.length ? Math.max(...rows) : 0;
+  const ok = best >= HIGHRISE_ROAD_ROW;
   return {
     ok,
-    needRow,
+    needRow: HIGHRISE_ROAD_ROW,
+    /** Largest total floor area the road allows. */
+    maxGfa: best >= HIGHRISE_ROAD_ROW_BIG ? Infinity : BIG_GFA,
     reason: ok
       ? undefined
-      : `MR 33 art. 2: a high-rise or extra-large building needs a plot side of at least ${HIGHRISE_FRONTAGE_LEN} m on a public road with a right-of-way of at least ${needRow} m.`,
+      : `MR 33 art. 2: a high-rise or extra-large building needs a plot side of at least ${HIGHRISE_FRONTAGE_LEN} m on a public road with a right-of-way of at least ${HIGHRISE_ROAD_ROW} m.`,
   };
 }
 
@@ -176,8 +183,9 @@ export function computeEnvelope(input: PlotInput, mode: Mode): Envelope {
   });
 
   if (mode === "high") {
-    const gate = highRiseGate(p.edges, p.roads, Math.min(gfaCap, 1e9));
+    const gate = highRiseGate(p.edges, p.roads);
     if (!gate.ok) return empty(gate.reason!);
+    gfaCap = Math.min(gfaCap, gate.maxGfa); // MR 33 art. 2: over 30,000 m2 needs an 18 m road
   }
 
   const footprint = footprintFor(mode, p, disabled);
